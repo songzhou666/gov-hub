@@ -75,7 +75,7 @@ def explain_text(root: Path) -> str:
 
 启用只需一次（约 1 分钟），我们会：
   1. 写入 gov-hub.yaml   —— 范围说明：AI 只在 {hint} 内活动，经您确认才生效
-  2. 写入 registry.yaml  —— 项目地图文件（含 2 条示例条目，填真实内容后删示例）
+  2. 写入 registry.yaml  —— 项目地图文件（初始为空表，之后每找到一处权威内容就添一条）
 
 📌 请放心（三条硬边界，写进代码，不靠承诺）：
   - 只新增这 2 个文件，不改写、不删除您的任何既有文件
@@ -145,9 +145,9 @@ def cmd_init(args: argparse.Namespace) -> int:
     path = core.write_config(root, cfg)
     print(f"\n已固化范围声明 → {path}（scope 指纹 {core.fingerprint(cfg, root)}）")
     reg_path, created = _write_registry_skeleton(main)
-    print(f"登记表 → {reg_path}" + ("（已生成骨架，含两条示例条目）" if created
+    print(f"登记表 → {reg_path}" + ("（已生成空表，等第一条真实条目）" if created
                                   else "（已存在，未覆盖）"))
-    print("下一步：把示例条目改成你的真实资产，然后依次运行 check 与 status。")
+    print("下一步：agent 找到权威文件时用 `add` 登记一条，然后依次运行 check 与 status。")
     return 0
 
 
