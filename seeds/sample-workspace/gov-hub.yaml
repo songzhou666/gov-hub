@@ -1,0 +1,9 @@
+version: 1
+scope:
+  roots: ["."]
+  exclude: []
+layout: loose
+containers: {}
+window_days: 30
+thresholds:
+  gap_yellow_max: 5

@@ -2,7 +2,24 @@
 
 > Agent 工作台的**治理骨架**：知识供给 → 执行 → 产出 → 回灌，四段链路可感知、可审计、可自启。
 >
-> **状态：设计阶段（0.0.x，未发布）**
+> **状态：0.1.0 MVP（loose 档可用）**
+
+## 快速上手（MVP）
+
+```bash
+python govhub.py init   --root <工作区>   # 范围确认关：探测候选 → 人工选择 → 固化 gov-hub.yaml
+python govhub.py check  --root <工作区>   # 机检：登记表 ↔ 磁盘一致性（exit 0 = 通过）
+python govhub.py status --root <工作区>   # 四段健康灯 + 回灌缺口
+```
+
+可运行的完整示例见 [`seeds/sample-workspace/`](seeds/sample-workspace)（虚构业务域，
+`check` 全绿即第一天体验）。登记表格式参考其 `registry.yaml`。
+
+| 能力 | loose 档 | mapped / convention 档 |
+|---|---|---|
+| 范围声明 + 指纹 | ✅ | ✅ |
+| 登记表 + check 机检 | ✅ | ✅ |
+| 执行/产出/回灌灯 | 提示未启用 | 0.2.0（containers 声明 + 缺口扫描已实现，待面板） |
 
 ## 这是什么
 

@@ -16,19 +16,25 @@
 
 ## 1. 范围声明协议（Scope Protocol）
 
-### 1.1 scope 配置（`gov-hub.yaml`，格式待冻结）
+### 1.1 scope 配置 `gov-hub.yaml`（格式 v1 —— **已冻结，2026-11-03**）
 
 ```yaml
-version: 1
+version: 1              # 配置格式版本，只增不改
 scope:
-  roots:            # 根路径列表（支持多根；相对路径相对本文件所在目录）
+  roots:                # 根路径列表（支持多根；相对路径相对本文件所在目录）
     - .
-    - ../旁挂资料区  # 用户场景：工作区在深层，大量文件在同级根目录
-  exclude:          # 排除项（glob）
-    - "**/node_modules/**"
-    - "**/.git/**"
-layout: loose       # loose | mapped | convention
+    - ../旁挂资料区
+  exclude:              # glob 排除项；默认已隐含 **/.git/** 与 **/node_modules/**
+    - "**/archive/**"
+layout: loose           # loose | mapped | convention
+containers: {}          # mapped/convention 档：记录型容器名映射；loose 档忽略
+window_days: 30         # 回灌缺口/活跃度窗口（增量制）
+thresholds:
+  gap_yellow_max: 5     # 回灌灯：0 绿 / 1~黄 / >此值 红
 ```
+
+冻结纪律：`version` 字段存在即格式不可 backwards-incompatible 变更；
+新增字段必须带默认值且旧配置零改动可读；破坏性变更只能升 version 并保留 v1 读取器。
 
 ### 1.2 判定流程（三级）
 
