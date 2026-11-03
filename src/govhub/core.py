@@ -276,9 +276,12 @@ def suggest_proposals(root: Path, cfg: dict[str, Any], min_hits: int = 2) -> lis
         routes.setdefault(eid, {"path": path, "terms": set(), "hits": 0})
         routes[eid]["terms"].add(str(t.get("terms", "")).strip())
         routes[eid]["hits"] += 1
-    # 整句问法不适合当关键词：提案只用短词（≤14 字），整句仅用于覆盖缺口的"用户这样问过"依据
+    # 整句问法不适合当关键词：提案只用短词，且过滤疑问句式（整句仅作覆盖缺口依据）
+    _Q = ("吗", "呢", "几份", "几个", "什么", "哪", "怎么", "多少", "如何",
+          "是否", "有没有", "在哪", "发现了")
     def _short(ts: set[str]) -> list[str]:
-        return sorted(t for t in ts if 0 < len(t) <= 14)
+        return sorted(t for t in ts
+                      if 0 < len(t) <= 14 and not any(q in t for q in _Q))
     proposals = []
     for eid, r in sorted(routes.items(), key=lambda kv: -len(kv[1]["terms"])):
         if r["hits"] < min_hits:
