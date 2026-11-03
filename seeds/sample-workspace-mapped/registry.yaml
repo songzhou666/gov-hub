@@ -1,0 +1,52 @@
+version: 1
+updated: '2026-11-03'
+layout-used-by: gov-hub MVP demo
+entries:
+- id: rule.warehouse
+  type: rule
+  title: 仓库管理规范
+  path: rules/01_仓库管理规范.md
+  keywords: [仓库, 库位, 入库, 出库]
+  answers: 库位分配与出入库约束
+  authority: canonical
+  updated: '2026-11-01'
+- id: rule.picking
+  type: rule
+  title: 拣货流程约定
+  path: rules/02_拣货流程约定.md
+  keywords: [拣货, 拣货单, 波次]
+  answers: 波次拆分与拣货路径约定
+  authority: canonical
+  updated: '2026-11-02'
+- id: rule.billing-cycle
+  type: rule
+  title: 账期对账规则
+  path: rules/03_账期对账规则.md
+  keywords: [账期, 对账, 结算]
+  answers: 账期边界与对账口径
+  authority: canonical
+  updated: '2026-11-03'
+- id: asset.docs-guide
+  type: asset
+  title: 资料区导读
+  path: docs/README.md
+  keywords: [资料, 导读, 目录]
+  answers: docs 区各子目录放什么
+  authority: canonical
+  updated: '2026-11-03'
+- id: asset.purchase-history
+  type: asset
+  title: 采购单历史说明
+  path: docs/采购单历史/说明.md
+  keywords: [采购单, 历史]
+  answers: 采购单历史区的整理约定
+  authority: canonical
+  updated: '2026-11-03'
+- id: plan.picking-regression
+  type: plan
+  title: 拣货回归批次计划
+  path: runs/拣货补漏批次/plan.md
+  keywords: [拣货, 回归, 补漏]
+  answers: 本批拣货回归的范围与结论落点
+  authority: canonical
+  updated: '2026-11-03'

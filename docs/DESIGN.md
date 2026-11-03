@@ -88,7 +88,8 @@ thresholds:
 
 | 版本 | 内容 |
 |---|---|
-| 0.0.x | 设计冻结：本文件 + scope 格式 + 脱敏清单 |
-| 0.1.0 | loose 档 MVP：scope 确认关 + 登记表 + check + status |
-| 0.2.0 | mapped 档 + 回灌缺口 + HTML 面板 |
-| 0.3.0 | convention 档 + 提案式改名 + 多根 scope 完整支持 |
+| 0.1.0 | loose 档 MVP：scope 确认关 + 登记表骨架生成 + check + lookup + status（已完成） |
+| 0.2.0 | mapped 档缺口扫描 + stale 指纹机制实测（已完成，随 0.1.0 一并交付） |
+| 后续 | convention 档提案式改名、多根 scope 完整支持、DSH 插件打包 |
+
+**已定决策**：不做 HTML 面板——CLI `status` 四灯已覆盖治理感知需求，可视化以命令输出为准。

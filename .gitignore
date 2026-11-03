@@ -7,3 +7,6 @@ __pycache__/
 _tmp_*
 *.log
 .DS_Store
+
+# generated 产物（可重建，不入库）
+.govhub/

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 from datetime import datetime, timedelta
@@ -159,6 +160,83 @@ def check_registry(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         "stats": {"total": len(reg["entries"]), "by_type": by_type,
                   "updated": str(reg.get("updated", "")), "version": reg.get("version")},
     }
+
+
+# ── generated 产物：检索索引（携带指纹，失配即重建） ──────────────
+INDEX_DIR = ".govhub"
+AUTH_RANK = {"canonical": 0, "generated": 1, "derived": 2, "legacy": 3}
+WEIGHTS = {"id": 5.0, "title": 4.0, "keywords": 4.0, "answers": 1.5, "path": 0.5}
+
+
+def build_index(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """从登记表重建 generated 检索索引。索引永不作为 canonical 引用。"""
+    reg = load_registry(root, cfg)
+    main = resolve_root(root, cfg["scope"]["roots"][0])
+    idx_dir = main / INDEX_DIR
+    idx_dir.mkdir(exist_ok=True)
+    index = {
+        "fingerprint": fingerprint(cfg, root),
+        "generated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "registry_updated": str(reg.get("updated", "")),
+        "entries": [{k: e.get(k, "") for k in
+                     ("id", "type", "title", "path", "answers", "authority")}
+                    | {"keywords": e.get("keywords", [])}
+                    for e in reg["entries"]],
+    }
+    (idx_dir / "index.json").write_text(
+        json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
+    return index
+
+
+def load_index(root: Path, cfg: dict[str, Any], *, allow_rebuild: bool = True) -> dict[str, Any]:
+    """读索引；缺失或指纹失配即 stale → 重建（generated 产物可随时重建）。"""
+    main = resolve_root(root, cfg["scope"]["roots"][0])
+    path = main / INDEX_DIR / "index.json"
+    fp = fingerprint(cfg, root)
+    if path.is_file():
+        try:
+            index = json.loads(path.read_text(encoding="utf-8"))
+            if index.get("fingerprint") == fp:
+                return index
+        except (json.JSONDecodeError, OSError):
+            pass
+    if not allow_rebuild:
+        return {"stale": True, "fingerprint": fp, "entries": []}
+    index = build_index(root, cfg)
+    index["rebuilt"] = True
+    return index
+
+
+def registry_changed(root: Path, cfg: dict[str, Any], index: dict[str, Any]) -> bool:
+    """登记表 updated 字段比索引新 → 提示重建（指纹只管 scope，不管内容）。"""
+    reg = load_registry(root, cfg)
+    return str(reg.get("updated", "")) != index.get("registry_updated", "")
+
+
+def search(index: dict[str, Any], terms: list[str], limit: int = 12) -> list[dict[str, Any]]:
+    """关键词 → 资产单元：分层打分（相等满分、包含半分），权威级并列排序。"""
+    toks = [t.strip().lower() for t in terms if t.strip()]
+    if not toks:
+        return []
+    scored = []
+    for e in index.get("entries", []):
+        total = 0.0
+        for field, weight in WEIGHTS.items():
+            vals = e.get(field)
+            vals = [str(v).lower() for v in vals] if isinstance(vals, list) \
+                else [str(vals or "").lower()]
+            for tok in toks:
+                for v in vals:
+                    if not v:
+                        continue
+                    if v == tok:
+                        total += weight
+                    elif tok in v:
+                        total += weight / 2
+        if total > 0:
+            scored.append((total, AUTH_RANK.get(str(e.get("authority")), 9), e))
+    scored.sort(key=lambda x: (-x[0], x[1]))
+    return [{**e, "score": round(s, 1)} for s, _, e in scored[:limit]]
 
 
 # ── 四段健康灯 ────────────────────────────────────────────────

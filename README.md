@@ -7,19 +7,29 @@
 ## 快速上手（MVP）
 
 ```bash
-python govhub.py init   --root <工作区>   # 范围确认关：探测候选 → 人工选择 → 固化 gov-hub.yaml
-python govhub.py check  --root <工作区>   # 机检：登记表 ↔ 磁盘一致性（exit 0 = 通过）
+python govhub.py init   --root <工作区>   # 范围确认关 + 登记表骨架生成
+python govhub.py check  --root <工作区>   # 机检：登记表 ↔ 磁盘一致；通过则同步检索索引
+python govhub.py lookup 账期 --root <工作区>  # 关键词 → 资产单元 → 权威文件
 python govhub.py status --root <工作区>   # 四段健康灯 + 回灌缺口
 ```
 
-可运行的完整示例见 [`seeds/sample-workspace/`](seeds/sample-workspace)（虚构业务域，
-`check` 全绿即第一天体验）。登记表格式参考其 `registry.yaml`。
+冷启动 3 分钟剧本：`init`（选范围，骨架自动生成）→ 把两条示例条目改成真实资产 →
+`check`（全绿 + 索引同步）→ `status`（四灯亮起）。映射产物 `.govhub/index.json`
+携带 scope 指纹，范围或登记表变更后自动重建——索引永远可重建、永不作权威引用。
+
+可运行的完整示例见 [`seeds/sample-workspace/`](seeds/sample-workspace)（loose 档，虚构业务域）
+与 [`seeds/sample-workspace-mapped/`](seeds/sample-workspace-mapped)（mapped 档，含 1 条演示缺口）。
 
 | 能力 | loose 档 | mapped / convention 档 |
 |---|---|---|
 | 范围声明 + 指纹 | ✅ | ✅ |
 | 登记表 + check 机检 | ✅ | ✅ |
-| 执行/产出/回灌灯 | 提示未启用 | 0.2.0（containers 声明 + 缺口扫描已实现，待面板） |
+| lookup 检索（分层打分 + 权威级排序） | ✅ | ✅ |
+| 执行/产出/回灌灯 + 缺口扫描 | 提示未启用 | ✅ |
+
+## 维护者
+
+songzhou
 
 ## 这是什么
 

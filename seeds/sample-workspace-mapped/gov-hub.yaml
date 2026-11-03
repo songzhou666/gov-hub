@@ -1,0 +1,10 @@
+version: 1
+scope:
+  roots: ["."]
+  exclude: []
+layout: mapped
+containers:
+  runs: {kind: record-batch}
+window_days: 30
+thresholds:
+  gap_yellow_max: 5
