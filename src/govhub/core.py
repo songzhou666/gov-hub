@@ -271,11 +271,12 @@ def suggest_proposals(root: Path, cfg: dict[str, Any], min_hits: int = 2) -> lis
         if "|" not in dest:
             continue
         eid, path = dest.split("|", 1)
-        routes.setdefault(eid, {"path": path, "terms": set()})
+        routes.setdefault(eid, {"path": path, "terms": set(), "hits": 0})
         routes[eid]["terms"].add(str(t.get("terms", "")).strip())
+        routes[eid]["hits"] += 1
     proposals = []
     for eid, r in sorted(routes.items(), key=lambda kv: -len(kv[1]["terms"])):
-        if len(r["terms"]) < min_hits:
+        if r["hits"] < min_hits:
             continue
         terms = sorted(r["terms"])
         e = known.get(eid)
@@ -284,11 +285,11 @@ def suggest_proposals(root: Path, cfg: dict[str, Any], min_hits: int = 2) -> lis
             if not new_kw:
                 continue
             proposals.append({"kind": "补充关键词", "id": eid, "path": r["path"],
-                              "suggest_keywords": new_kw,
+                              "suggest_keywords": new_kw, "hits": r["hits"],
                               "yaml": f"  keywords: {list(e.get('keywords', [])) + new_kw}"})
         else:
             proposals.append({"kind": "新建条目草稿", "id": eid, "path": r["path"],
-                              "suggest_keywords": terms,
+                              "suggest_keywords": terms, "hits": r["hits"],
                               "yaml": (f"- id: {eid.split('.')[0]}.draft\n"
                                        f"  type: asset\n  title: （待填）\n  path: {r['path']}\n"
                                        f"  keywords: {terms}\n  answers: （待填）\n"
@@ -383,3 +384,4 @@ def lamps(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         },
         "gaps": gaps,
     }
+

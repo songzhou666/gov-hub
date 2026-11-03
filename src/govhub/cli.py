@@ -231,7 +231,7 @@ def cmd_suggest(args: argparse.Namespace) -> int:
     print(f"根据路线迹提炼出 {len(props)} 条登记提案（仅提案，确认后请手工改 registry.yaml）：\n")
     for p in props:
         print(f"[{p['kind']}] {p['id']} · {p['path']}")
-        print(f"  依据：被查 {len(p['suggest_keywords'])} 次以上，查法：{p['suggest_keywords']}")
+        print(f"  依据：被查 {p["hits"]} 次，查法：{p['suggest_keywords']}")
         print(f"  建议 YAML：\n{p['yaml']}\n")
     if args.json:
         print(json.dumps(props, ensure_ascii=False, indent=2))
@@ -273,3 +273,4 @@ def main() -> int:
     p.set_defaults(fn=cmd_suggest)
     args = ap.parse_args()
     return args.fn(args)
+
