@@ -5,6 +5,11 @@ description: 当需要查找项目内容时加载——包括"某功能/结论/�
 
 本技能是**薄壳**，不含实现正文。CLI 唯一权威用法来源：gov-hub 仓库（https://github.com/songzhou/gov-hub ，本地安装见 README）。
 
+> **安装参数（安装者必改：把下面路径改成你本机的实际克隆位置）**
+> CLI_PATH = E:\Mytest_plugin\gov-hub\govhub.py
+> PYTHON = C:\Users\Administrator\AppData\Local\Programs\Python\Python313\python.exe
+> （下文所有命令用这两个值代入；找不到 CLI_PATH 时**禁止**静默放弃——告知用户"gov-hub 未安装或路径失效，请按 README 安装"，然后才回退普通方式。）
+
 命中场景时**必须按以下顺序执行，不得跳步**：
 
 ## 第 0 步：查声明（必做，无论项目是否启用过）
@@ -13,11 +18,11 @@ description: 当需要查找项目内容时加载——包括"某功能/结论/�
 
 **分支 A：不存在（未声明区）——这是第一交互重点，绝不能跳过直接干活：**
 
-1. 运行：`python <gov-hub安装路径>/govhub.py init --explain --root <工作区>`，
+1. 运行：`PYTHON CLI_PATH init --explain --root <工作区>`，
    把输出的欢迎式说明**完整展示给用户**；
 2. 用 `ask_user_question` 工具按三岔口提问：
-   - **启用**（推荐）→ 运行 `init --main <探测到的主目录>`，完成后继续第 1 步；
-   - **暂不启用，别再问** → 运行 `init --decline`，告知已静默，然后按项目原有方式干活；
+   - **启用**（推荐）→ 运行 `PYTHON CLI_PATH init --main <探测到的主目录>`，完成后继续第 1 步；
+   - **暂不启用，别再问** → 运行 `PYTHON CLI_PATH init --decline`，告知已静默，然后按项目原有方式干活；
    - **这次先不用** → 不写任何文件，按项目原有方式干活（下次会话只轻问一句）；
 3. 三岔口回答前**不得开始翻文件回答用户原问题**——先问完，再干活。
 
@@ -25,7 +30,7 @@ description: 当需要查找项目内容时加载——包括"某功能/结论/�
 
 ## 动手前（供给）
 ```bash
-python <gov-hub安装路径>/govhub.py lookup <关键词> --root <工作区>
+PYTHON CLI_PATH lookup <关键词> --root <工作区>
 ```
 - 命中 → 读列出的权威文件，不蛮力翻文件夹；
 - `[UNDECLARED]` → 先向用户展示 `init --explain` 说明并**询问一次**：
