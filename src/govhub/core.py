@@ -321,7 +321,8 @@ def suggest_proposals(root: Path, cfg: dict[str, Any], min_hits: int = 2) -> lis
                               "suggest_keywords": [str(m["terms"])],
                               "hits": m["hits"],
                               "yaml": (f"# 用户 {m['hits']} 次查「{m['terms']}」均未命中——"
-                                       f"找到对应权威文件后补条目，keywords 含「{m['terms']}」")})
+                                       f"找到对应权威文件后用 add 登记；keywords 用短主题词"
+                                       f"（去掉疑问句式），answers 写清能回答什么")})
     return proposals
 
 
