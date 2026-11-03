@@ -233,9 +233,11 @@ def record_trail(root: Path, cfg: dict[str, Any], terms: list[str],
         main = resolve_root(root, cfg["scope"]["roots"][0])
         idx_dir = main / INDEX_DIR
         idx_dir.mkdir(exist_ok=True)
+        dest = (f"{top_hit.get('id')}|{top_hit.get('path')}"
+                if top_hit is not None else None)
         rec = {"ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                "terms": " ".join(terms),
-               "dest": f"{top_hit.get('id')}|{top_hit.get('path')}"}
+               "dest": dest}
         with open(idx_dir / "trail.jsonl", "a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     except OSError:
