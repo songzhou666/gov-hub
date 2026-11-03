@@ -37,6 +37,20 @@ python govhub.py status --root <工作区>   # 四段健康灯 + 回灌缺口
 
 songzhou
 
+## 安装（DSH 用户级 skill 薄壳）
+
+把 `dsh/SKILL.md` 拷到你的 DSH 用户级 skills 目录：
+
+```bash
+# Windows（DSH_HOME 默认 ~/.dsh；若设置了 DSH_HOME 环境变量则用它的 skills 子目录）
+mkdir -p "$env:DSH_HOME\skills\gov-hub"   # 默认即 $env:USERPROFILE\.dsh\skills\gov-hub
+copy dsh\SKILL.md "$env:DSH_HOME\skills\gov-hub\SKILL.md"
+```
+
+新会话的 skill 目录出现 `gov-hub` 即装好；卸载 = 删这一个文件。
+注意：CLI 本体（本仓库）路径会被 SKILL.md 正文引用，请保持仓库在固定位置，
+或按你实际的克隆路径修改 SKILL.md 中的命令路径。
+
 ## 用户体验口径
 
 所有面向用户的文案（CLI 提示、确认关、将来插件 description）以
