@@ -14,10 +14,19 @@
 
 ```bash
 python govhub.py init   --root <工作区>   # 范围确认关 + 登记表骨架生成
+python govhub.py add    <文件> --root <工作区> --keywords 词1,词2 --answers "能回答什么"  # 登记一条（自动机检+同步索引）
 python govhub.py check  --root <工作区>   # 机检：登记表 ↔ 磁盘一致；通过则同步检索索引
-python govhub.py lookup 账期 --root <工作区>  # 关键词 → 资产单元 → 权威文件
+python govhub.py lookup 账期 --root <工作区>  # 关键词或整句问法 → 资产单元 → 权威文件
 python govhub.py status --root <工作区>   # 四段健康灯 + 回灌缺口
+python govhub.py suggest --root <工作区>  # 从路线迹提炼：该补的关键词 / 该建的条目
+python govhub.py attach --root <工作区> [--scope project|user]  # 入口块写进 AGENTS.md（可 detach 撤销）
+python govhub.py detach --root <工作区> [--scope project|user]  # 精确移除入口块，块外内容不动
 ```
+
+**让每个会话都先走地图**：`attach` 会在 `AGENTS.md` 里写一段带标记的入口
+（`<!-- gov-hub:begin -->` … `<!-- gov-hub:end -->`）——块外一个字节不动、重复执行不重复追加、
+`detach` 可逐字节还原。`--scope user` 写进用户级 `$DSH_HOME/AGENTS.md`，一次注册全部项目生效，
+块内带条件句，未启用 gov-hub 的项目自动忽略。**建议先问用户是否要写，再执行。**
 
 冷启动 3 分钟剧本：`init`（选范围，骨架自动生成）→ 把两条示例条目改成真实资产 →
 `check`（全绿 + 索引同步）→ `status`（四灯亮起）。映射产物 `.govhub/index.json`

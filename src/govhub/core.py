@@ -418,3 +418,114 @@ def lamps(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         "gaps": gaps,
     }
 
+
+
+# ── AGENTS.md 入口注册（attach / detach）────────────────────────
+# 设计约束：
+# - 只动自己的标记块：<!-- gov-hub:begin --> … <!-- gov-hub:end -->，块外一个字节不改；
+# - 幂等：重复 attach 只替换块内容，不重复追加；
+# - 可精确还原：detach 后文件应与 attach 前逐字节一致（无块时删除我们创建的文件）；
+# - 插在 H1 之后/文件顶部：DSH 预算超限截的是尾部，块必须靠前才不会被截掉。
+AGENTS_BEGIN = "<!-- gov-hub:begin managed block; 用 govhub.py attach/detach 维护，请勿手改块内 -->"
+AGENTS_END = "<!-- gov-hub:end -->"
+
+AGENTS_BLOCK_TMPL = """{begin}
+## 查找项目内容：先查项目地图（gov-hub）
+
+**若当前工作区根存在 `gov-hub.yaml`**，凡遇到"某内容在哪个文件 / 什么时候做过什么 /
+有哪些记录 / 之前测试结论在哪"这类问题：
+
+- 先运行 `{python} "{cli}" lookup "<关键词或整句问法>" --root <当前工作区>`，
+  按返回的权威文件作答，**不要递归扫描目录**（尤其 node_modules）；
+- 未命中 → 按原有方式查找；找到权威文件后立即登记（地图靠这一步生长）：
+  `{python} "{cli}" add <文件相对路径> --keywords <用户问法,主题词> --answers "<能回答什么>"`；
+- 项目地图只索引工作区文件，**不含对话内容**；问"上次会话聊了什么"不要翻会话日志。
+
+**若不存在 `gov-hub.yaml`**：忽略本节，按原方式工作（不要主动初始化，除非用户要求）。
+
+变更/撤销：`govhub.py attach` / `govhub.py detach`（整块可删，不影响其他内容）。
+{end}"""
+
+
+def agents_block(python_exe: str, cli_path: str) -> str:
+    return AGENTS_BLOCK_TMPL.format(begin=AGENTS_BEGIN, end=AGENTS_END,
+                                    python=python_exe or "python",
+                                    cli=cli_path)
+
+
+def _strip_block(text: str) -> tuple[str, bool]:
+    """移除标记块并归一化拼接处空行，返回 (其余内容, 是否找到块)。"""
+    start = text.find(AGENTS_BEGIN)
+    if start < 0:
+        return text, False
+    end = text.find(AGENTS_END, start)
+    if end < 0:
+        return text, False
+    end += len(AGENTS_END)
+    before = text[:start].rstrip("\n")
+    after = text[end:].lstrip("\n")
+    if before and after:
+        return before + "\n\n" + after, True
+    if before:
+        return before + "\n", True
+    return after, True
+
+
+def attach_agents(path: Path, block: str, dry_run: bool = False) -> dict[str, Any]:
+    """写入/更新入口块。返回 {action, path, created_file}。"""
+    existed = path.is_file()
+    original = path.read_text(encoding="utf-8") if existed else ""
+    stripped, had_block = _strip_block(original)
+    if had_block:  # 原位替换：块留在原位置（通常是 H1 之后），周围字节不动
+        start = original.find(AGENTS_BEGIN)
+        end = original.find(AGENTS_END, start) + len(AGENTS_END)
+        tail = original[end:]
+        new = original[:start] + block + (tail if tail.startswith("\n") else "\n" + tail.lstrip("\n"))
+        action = "updated"
+    elif existed:
+        lines = stripped.splitlines(keepends=True)
+        idx = next((i for i, ln in enumerate(lines) if re.match(r"^#\s+\S", ln)), None)
+        if idx is None:
+            new = block + "\n\n" + stripped.lstrip("\n")
+        else:
+            head = "".join(lines[:idx + 1]).rstrip("\n")
+            tail = "".join(lines[idx + 1:]).lstrip("\n")
+            new = head + "\n\n" + block + "\n"
+            if tail:
+                new += "\n" + tail
+        action = "inserted"
+    else:
+        new = block + "\n"
+        action = "created"
+    if not dry_run:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(new, encoding="utf-8")
+    return {"action": action, "path": str(path), "created_file": not existed,
+            "changed": new != original}
+
+
+def detach_agents(path: Path, dry_run: bool = False) -> dict[str, Any]:
+    """移除入口块；块外内容原样保留；若移除后只剩空白则删除文件。"""
+    if not path.is_file():
+        return {"action": "absent", "path": str(path)}
+    original = path.read_text(encoding="utf-8")
+    stripped, had = _strip_block(original)
+    if not had:
+        return {"action": "no-block", "path": str(path)}
+    new = stripped.strip("\n")
+    new = new + "\n" if new else ""
+    if not dry_run:
+        if new.strip():
+            path.write_text(new, encoding="utf-8")
+            return {"action": "removed", "path": str(path)}
+        path.unlink()
+        return {"action": "removed-and-deleted-file", "path": str(path)}
+    return {"action": "removed", "path": str(path)}
+
+
+def default_agents_target(root: Path, scope: str) -> Path:
+    """scope=project → <工作区>/AGENTS.md；scope=user → $DSH_HOME/AGENTS.md 或 ~/.dsh/AGENTS.md。"""
+    if scope == "project":
+        return root / "AGENTS.md"
+    home = os.environ.get("DSH_HOME") or str(Path.home() / ".dsh")
+    return Path(home) / "AGENTS.md"

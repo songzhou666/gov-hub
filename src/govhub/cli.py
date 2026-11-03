@@ -310,6 +310,55 @@ def cmd_add(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cli_path() -> str:
+    """本 CLI 的可执行入口（供写进 AGENTS.md 的命令行）。"""
+    return str(Path(__file__).resolve().parents[2] / "govhub.py")
+
+
+def cmd_attach(args: argparse.Namespace) -> int:
+    """把入口块写进 AGENTS.md（项目级或用户级）——标记块、幂等、可 detach 精确还原。"""
+    root = Path(args.root or ".").resolve()
+    if (g := _gate(root)) is not None:
+        return g
+    scope = args.scope
+    target = Path(args.file) if args.file else core.default_agents_target(root, scope)
+    block = core.agents_block(args.python or sys.executable, _cli_path())
+    res = core.attach_agents(target, block, dry_run=args.dry_run)
+    if res["action"] == "updated" and not res["changed"]:
+        print(f"[已是最新] {res['path']}（块内容一致，无需改动）")
+        return 0
+    verb = {"created": "已创建并写入", "inserted": "已插入入口块到",
+            "updated": "已更新入口块于"}[res["action"]]
+    print(f"{verb} {res['path']}" + ("（dry-run，未落盘）" if args.dry_run else ""))
+    scope_desc = ("自定义路径" if args.file
+                  else "项目级（随项目走）" if scope == "project"
+                  else "用户级（该用户所有会话生效）")
+    print(f"  作用域：{scope_desc}")
+    undo = "govhub.py detach"
+    if args.file:
+        undo += f" --file {args.file}"
+    else:
+        undo += " --scope " + scope
+    print(f"  撤销：{undo}")
+    if scope == "user":
+        print("  提示：用户级入口对所有工作区生效——块内已写条件句，未启用 gov-hub 的项目自动忽略。")
+    return 0
+
+
+def cmd_detach(args: argparse.Namespace) -> int:
+    root = Path(args.root or ".").resolve()
+    if (g := _gate(root)) is not None:
+        return g
+    target = Path(args.file) if args.file else core.default_agents_target(root, args.scope)
+    res = core.detach_agents(target, dry_run=args.dry_run)
+    msg = {"absent": f"[无文件] {res['path']}",
+           "no-block": f"[无入口块] {res['path']}（未找到 gov-hub 标记，未改动）",
+           "removed": f"已移除入口块：{res['path']}",
+           "removed-and-deleted-file": f"已移除入口块，且文件只剩空内容 → 已删除 {res['path']}"}
+    print(msg[res["action"]] + ("（dry-run，未落盘）" if args.dry_run else ""))
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(prog="govhub", description="gov-hub 治理骨架 CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -354,6 +403,20 @@ def main() -> int:
     p.add_argument("--authority", default="canonical",
                    choices=["canonical", "derived", "generated"])
     p.set_defaults(fn=cmd_add)
+    p = sub.add_parser("attach", help="把入口块写进 AGENTS.md（标记块/幂等/可 detach 还原）")
+    p.add_argument("--root", default=".")
+    p.add_argument("--scope", default="project", choices=["project", "user"],
+                   help="project=工作区 AGENTS.md；user=$DSH_HOME/AGENTS.md（全项目生效）")
+    p.add_argument("--file", default="", help="显式指定目标文件（优先于 --scope）")
+    p.add_argument("--python", default="", help="写进块里的 Python 解释器路径")
+    p.add_argument("--dry-run", action="store_true")
+    p.set_defaults(fn=cmd_attach)
+    p = sub.add_parser("detach", help="从 AGENTS.md 移除入口块（块外内容不动）")
+    p.add_argument("--root", default=".")
+    p.add_argument("--scope", default="project", choices=["project", "user"])
+    p.add_argument("--file", default="")
+    p.add_argument("--dry-run", action="store_true")
+    p.set_defaults(fn=cmd_detach)
     args = ap.parse_args()
     return args.fn(args)
 
