@@ -55,8 +55,35 @@ def _ask(prompt: str, default: str = "") -> str:
         return default
 
 
+def _gate(root: Path) -> int | None:
+    """入口闸：已拒绝 → 静默退出（agent 不再询问）；未声明 → 引导一次性询问协议。"""
+    if core.declined(root):
+        print(f"[MUTED] 本区已声明不启用治理（{core.DECLINE_NAME}）。"
+              f"不再提示；用户反悔可删除该文件或运行 init --main . --override。")
+        return 2
+    if core.load_config(root) is None:
+        print(f"[UNDECLARED] 本区未声明治理范围（无 {core.CONFIG_NAME}）。"
+              f"向用户说明并询问一次：同意 → init --main <探测路径>；"
+              f"拒绝/跳过 → init --decline 落标记，之后不再询问。")
+        return 2
+    return None
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     root = Path(args.root or ".").resolve()
+    if args.decline:
+        (root / core.DECLINE_NAME).write_text(
+            f"declined: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+            f"note: 用户拒绝或跳过初始化；治理命令对本区静默。\n", encoding="utf-8")
+        print(f"已记录拒绝声明 → {root / core.DECLINE_NAME}")
+        print("治理命令对本区进入静默模式；反悔时删除该文件或运行 init --main . --override。")
+        return 0
+    if core.declined(root) and not args.override:
+        print(f"[MUTED] 本区已声明不启用治理。如确要启用，加 --override 覆盖拒绝标记。")
+        return 2
+    if args.override and core.declined(root):
+        (root / core.DECLINE_NAME).unlink()
+        print("已移除拒绝标记。")
     if core.load_config(root) is not None:
         print(f"[SKIP] {core.config_path(root)} 已存在——范围已声明，不重新推断。")
         print("       如需变更范围，直接编辑该文件后运行 check。")
@@ -91,10 +118,9 @@ def cmd_init(args: argparse.Namespace) -> int:
 
 def cmd_check(args: argparse.Namespace) -> int:
     root = Path(args.root or ".").resolve()
+    if (g := _gate(root)) is not None:
+        return g
     cfg = core.load_config(root)
-    if cfg is None:
-        print(f"[FATAL] 未找到 {core.CONFIG_NAME} —— 范围未声明。先运行 init。")
-        return 2
     result = core.check_registry(root, cfg)
     st = result["stats"]
     print(f"登记表 v{st['version']} · updated {st['updated']} · {st['total']} 条")
@@ -114,10 +140,9 @@ def cmd_check(args: argparse.Namespace) -> int:
 
 def cmd_lookup(args: argparse.Namespace) -> int:
     root = Path(args.root or ".").resolve()
+    if (g := _gate(root)) is not None:
+        return g
     cfg = core.load_config(root)
-    if cfg is None:
-        print(f"[FATAL] 未找到 {core.CONFIG_NAME} —— 范围未声明。先运行 init。")
-        return 2
     index = core.load_index(root, cfg)
     note = "（索引曾 stale，已自动重建）" if index.get("rebuilt") else ""
     if core.registry_changed(root, cfg, index):
@@ -138,10 +163,9 @@ def cmd_lookup(args: argparse.Namespace) -> int:
 
 def cmd_status(args: argparse.Namespace) -> int:
     root = Path(args.root or ".").resolve()
+    if (g := _gate(root)) is not None:
+        return g
     cfg = core.load_config(root)
-    if cfg is None:
-        print(f"[FATAL] 未找到 {core.CONFIG_NAME} —— 范围未声明。先运行 init。")
-        return 2
     index = core.load_index(root, cfg)
     state = core.lamps(root, cfg)
     for name, d in state["lamps"].items():
@@ -162,6 +186,10 @@ def main() -> int:
     p.add_argument("--root", default=".", help="工作区根")
     p.add_argument("--main", default="", help="显式指定主工作区（跳过交互，agent/脚本用）")
     p.add_argument("--extra", default="", help="旁挂目录，逗号分隔（配合 --main）")
+    p.add_argument("--decline", action="store_true",
+                   help="记录用户拒绝：写 gov-hub.declined，治理命令此后静默")
+    p.add_argument("--override", action="store_true",
+                   help="覆盖已有拒绝标记，走正常初始化")
     p.set_defaults(fn=cmd_init)
     p = sub.add_parser("check", help="机检：登记表 ↔ 磁盘一致性；通过则同步检索索引")
     p.add_argument("--root", default=".")

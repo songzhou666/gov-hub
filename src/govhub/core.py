@@ -22,6 +22,7 @@ except ImportError as e:  # pragma: no cover
     raise SystemExit("[FATAL] 需要 PyYAML：pip install pyyaml") from e
 
 CONFIG_NAME = "gov-hub.yaml"
+DECLINE_NAME = "gov-hub.declined"
 REGISTRY_NAME = "registry.yaml"
 CONFIG_VERSION = 1
 
@@ -72,6 +73,11 @@ def fingerprint(cfg: dict[str, Any], root: Path) -> str:
 
 def config_path(root: Path) -> Path:
     return root / CONFIG_NAME
+
+
+def declined(root: Path) -> bool:
+    """用户已明确拒绝治理 → 静默模式，agent 不再询问。"""
+    return (root / DECLINE_NAME).is_file()
 
 
 # ── init：候选探测（只产候选，不落决定） ─────────────────────────
