@@ -46,30 +46,40 @@ def _write_registry_skeleton(main_root: Path) -> tuple[Path, bool]:
     return path, True
 
 
+def _ask(prompt: str, default: str = "") -> str:
+    """交互提问；非交互环境（管道/agent 调用）EOF 时静默取默认值。"""
+    try:
+        raw = input(prompt).strip()
+        return raw or default
+    except EOFError:
+        return default
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     root = Path(args.root or ".").resolve()
     if core.load_config(root) is not None:
         print(f"[SKIP] {core.config_path(root)} 已存在——范围已声明，不重新推断。")
         print("       如需变更范围，直接编辑该文件后运行 check。")
         return 0
-    cands = core.detect_candidates(root)
-    print("检测到候选范围（启发式仅供选择，确认后才固化）：\n")
-    for i, c in enumerate(cands, 1):
-        print(f"  [{i}] {c['path']}\n      {c['reason']}")
-    print(f"  [0] {root}（当前目录，无标记依赖）")
-    try:
-        pick = input("\n选择主工作区编号 [默认 0]: ").strip() or "0"
-    except EOFError:
-        pick = "0"
-    if pick.isdigit() and 1 <= int(pick) <= len(cands):
-        main = Path(cands[int(pick) - 1]["path"])
-    else:
-        main = root
-    extra = input("旁挂目录（可选，逗号分隔，相对主工作区）: ").strip()
+    if args.main:  # 显式参数路径：不进交互，适合 agent / 脚本调用
+        main = Path(args.main if Path(args.main).is_absolute()
+                    else (root / args.main)).resolve()
+        extras = [x.strip() for x in (args.extra or "").split(",") if x.strip()]
+    else:  # 交互路径：探测候选，人工选择
+        cands = core.detect_candidates(root)
+        print("检测到候选范围（启发式仅供选择，确认后才固化）：\n")
+        for i, c in enumerate(cands, 1):
+            print(f"  [{i}] {c['path']}\n      {c['reason']}")
+        print(f"  [0] {root}（当前目录，无标记依赖）")
+        pick = _ask("\n选择主工作区编号 [默认 0]: ", "0")
+        if pick.isdigit() and 1 <= int(pick) <= len(cands):
+            main = Path(cands[int(pick) - 1]["path"])
+        else:
+            main = root
+        extras = [x.strip() for x in _ask("旁挂目录（可选，逗号分隔，相对主工作区）: ").split(",") if x.strip()]
     cfg = core.default_config()
     cfg["scope"]["roots"] = [str(main)] + [
-        x.strip() if Path(x.strip()).is_absolute() else str((main / x.strip()).resolve())
-        for x in extra.split(",") if x.strip()]
+        x if Path(x).is_absolute() else str((main / x).resolve()) for x in extras]
     path = core.write_config(root, cfg)
     print(f"\n已固化范围声明 → {path}（scope 指纹 {core.fingerprint(cfg, root)}）")
     reg_path, created = _write_registry_skeleton(main)
@@ -112,7 +122,7 @@ def cmd_lookup(args: argparse.Namespace) -> int:
     note = "（索引曾 stale，已自动重建）" if index.get("rebuilt") else ""
     if core.registry_changed(root, cfg, index):
         index = core.build_index(root, cfg)
-        note = "（登记表 updated 有变化，索引已重建）"
+        note = "（登记表内容有变化，索引已重建）"
     hits = core.search(index, args.terms, limit=args.limit)
     if not hits:
         print(f"未命中。试试登记表里已有的关键词，或先 check 同步索引。{note}")
@@ -150,6 +160,8 @@ def main() -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("init", help="范围确认关：探测候选并固化 gov-hub.yaml + 登记表骨架")
     p.add_argument("--root", default=".", help="工作区根")
+    p.add_argument("--main", default="", help="显式指定主工作区（跳过交互，agent/脚本用）")
+    p.add_argument("--extra", default="", help="旁挂目录，逗号分隔（配合 --main）")
     p.set_defaults(fn=cmd_init)
     p = sub.add_parser("check", help="机检：登记表 ↔ 磁盘一致性；通过则同步检索索引")
     p.add_argument("--root", default=".")

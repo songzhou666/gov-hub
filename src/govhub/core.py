@@ -152,7 +152,7 @@ def check_registry(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         t = str(e.get("type", "asset"))
         by_type[t] = by_type.get(t, 0) + 1
         p = main / str(e.get("path", ""))
-        if not p.is_file():
+        if not (p.is_file() or p.is_dir()):
             problems.append(f"路径不在盘: {e.get('path')}（{e.get('id')}）")
     return {
         "ok": not problems,
@@ -177,7 +177,7 @@ def build_index(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     index = {
         "fingerprint": fingerprint(cfg, root),
         "generated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "registry_updated": str(reg.get("updated", "")),
+        "registry_signature": registry_signature(reg),
         "entries": [{k: e.get(k, "") for k in
                      ("id", "type", "title", "path", "answers", "authority")}
                     | {"keywords": e.get("keywords", [])}
@@ -207,10 +207,16 @@ def load_index(root: Path, cfg: dict[str, Any], *, allow_rebuild: bool = True) -
     return index
 
 
+def registry_signature(reg: dict[str, Any]) -> str:
+    """登记表内容签名：updated 字段会忘改，内容才是真相。"""
+    material = sorted(f"{e.get('id')}|{e.get('path')}|{e.get('updated', '')}"
+                      for e in reg.get("entries", []))
+    return hashlib.sha256(repr(material).encode("utf-8")).hexdigest()[:12]
+
+
 def registry_changed(root: Path, cfg: dict[str, Any], index: dict[str, Any]) -> bool:
-    """登记表 updated 字段比索引新 → 提示重建（指纹只管 scope，不管内容）。"""
-    reg = load_registry(root, cfg)
-    return str(reg.get("updated", "")) != index.get("registry_updated", "")
+    """登记表内容签名与索引记录不一致 → 需要重建（不信任 updated 字段）。"""
+    return registry_signature(load_registry(root, cfg)) != index.get("registry_signature", "")
 
 
 def search(index: dict[str, Any], terms: list[str], limit: int = 12) -> list[dict[str, Any]]:
