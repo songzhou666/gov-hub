@@ -294,6 +294,24 @@ def suggest_proposals(root: Path, cfg: dict[str, Any], min_hits: int = 2) -> lis
                                        f"  type: asset\n  title: （待填）\n  path: {r['path']}\n"
                                        f"  keywords: {terms}\n  answers: （待填）\n"
                                        f"  authority: canonical")})
+    # 覆盖缺口：同主题被问 ≥min_hits 次但从未命中——用户在找地图上没有的东西
+    misses: dict[str, dict[str, object]] = {}
+    for t in load_trail(root, cfg):
+        if t.get("dest"):
+            continue
+        terms_str = str(t.get("terms", "")).strip()
+        if not terms_str:
+            continue
+        m = misses.setdefault(terms_str, {"terms": terms_str, "hits": 0})
+        m["hits"] = int(m["hits"]) + 1  # type: ignore[assignment]
+    for m in misses.values():
+        if int(m["hits"]) >= min_hits:  # type: ignore[arg-type]
+            proposals.append({"kind": "覆盖缺口（多次问但地图没有）",
+                              "id": None, "path": None,
+                              "suggest_keywords": [str(m["terms"])],
+                              "hits": m["hits"],
+                              "yaml": (f"# 用户 {m['hits']} 次查「{m['terms']}」均未命中——"
+                                       f"找到对应权威文件后补条目，keywords 含「{m['terms']}」")})
     return proposals
 
 

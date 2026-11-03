@@ -189,6 +189,7 @@ def cmd_lookup(args: argparse.Namespace) -> int:
         note = "（登记表内容有变化，索引已重建）"
     hits = core.search(index, args.terms, limit=args.limit)
     if not hits:
+        core.record_trail(root, cfg, args.terms, None)  # 未命中也留迹：覆盖缺口的原料
         print(f"未命中。试试登记表里已有的关键词，或先 check 同步索引。{note}")
         return 1
     core.record_trail(root, cfg, args.terms, hits[0])  # 走过就留迹：起点→终点自动上地图

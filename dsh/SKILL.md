@@ -37,11 +37,18 @@ PYTHON CLI_PATH lookup <关键词> --root <工作区>
   同意 → `init --main <探测路径>`；拒绝/跳过 → `init --decline`，此后本项目永久静默、不得再提；
 - `[MUTED]` → 用户已拒绝，静默跳过，一切按项目原有方式干活。
 
-## 落盘后（回灌）
-新增/移动了重要文件 → 在 registry.yaml 补条目 → `check` 验证（全绿才算改完）。
+## 回灌（每次会话的收尾动作，两个来源都要登记）
+
+1. **新增/移动了重要文件** → 在 registry.yaml 补条目；
+2. **回答问题时用到了地图上没有的文件**（lookup 未命中、靠浏览找到的权威文件）
+   → **必须**把该文件登记成新条目（id/type/title/path/keywords/answers/authority/updated
+   八字段齐全，keywords 里加用户本次的实际问法）——这是地图生长的主要方式；
+   只读的临时/生成文件登记 authority: generated 或不登记。
+3. 登记后跑 `PYTHON CLI_PATH check --root <工作区>` 验证（全绿才算改完）。
 
 ## 会话收尾（体检）
-`status` 看四灯；缺口要么补登记要么告知用户归档；顺手 `suggest` 看有没有高频路线值得补关键词。
+`PYTHON CLI_PATH status --root <工作区>` 看四灯；`PYTHON CLI_PATH suggest --root <工作区>`
+看路线迹里有没有高频路线值得补关键词。
 
 ## 文案纪律
 对用户只说"项目地图"，禁用"治理/登记表/回灌"等内部词；完整口径见仓库 `docs/UX_COPY.md`。
