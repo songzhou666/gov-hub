@@ -276,11 +276,16 @@ def suggest_proposals(root: Path, cfg: dict[str, Any], min_hits: int = 2) -> lis
         routes.setdefault(eid, {"path": path, "terms": set(), "hits": 0})
         routes[eid]["terms"].add(str(t.get("terms", "")).strip())
         routes[eid]["hits"] += 1
+    # 整句问法不适合当关键词：提案只用短词（≤14 字），整句仅用于覆盖缺口的"用户这样问过"依据
+    def _short(ts: set[str]) -> list[str]:
+        return sorted(t for t in ts if 0 < len(t) <= 14)
     proposals = []
     for eid, r in sorted(routes.items(), key=lambda kv: -len(kv[1]["terms"])):
         if r["hits"] < min_hits:
             continue
-        terms = sorted(r["terms"])
+        terms = _short(r["terms"])
+        if not terms:
+            continue
         e = known.get(eid)
         if e is not None:
             new_kw = [t for t in terms if t not in [str(k) for k in e.get("keywords", [])]]
