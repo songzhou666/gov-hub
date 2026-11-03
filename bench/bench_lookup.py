@@ -58,7 +58,7 @@ def main() -> None:
     index = {"entries": reg["entries"]}
     listing_chars = sum(len(p.name) + 2 for p in ASSETS.iterdir())  # 蛮力第一步：浏览目录
 
-    queries = ["叫号", "跨库", "登录", "分表", "token", "工单", "目录规范", "测试计划", "签名", "会话"]
+    queries = ["接口", "规则", "检查", "脚本", "环境", "流程", "文档", "测试", "数据", "配置"]
     rows, tot_a, tot_b = [], 0, 0
     for q in queries:
         hits = core.search(index, [q], limit=12)
