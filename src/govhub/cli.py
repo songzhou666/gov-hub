@@ -316,10 +316,12 @@ def _cli_path() -> str:
 
 
 def cmd_attach(args: argparse.Namespace) -> int:
-    """把入口块写进 AGENTS.md（项目级或用户级）——标记块、幂等、可 detach 精确还原。"""
+    """把入口块写进 AGENTS.md（项目级或用户级）——标记块、幂等、可 detach 精确还原。
+
+    不加入口闸：入口块本身就是给"尚未声明该区"的会话用的（块内自带条件句），
+    若在此处要求先 init，则未声明区永远拿不到入口。
+    """
     root = Path(args.root or ".").resolve()
-    if (g := _gate(root)) is not None:
-        return g
     scope = args.scope
     target = Path(args.file) if args.file else core.default_agents_target(root, scope)
     block = core.agents_block(args.python or sys.executable, _cli_path())
@@ -346,9 +348,8 @@ def cmd_attach(args: argparse.Namespace) -> int:
 
 
 def cmd_detach(args: argparse.Namespace) -> int:
+    """移除入口块。不加闸：撤销必须永远可用——用户拒绝（MUTED）或未声明时也要能撤销。"""
     root = Path(args.root or ".").resolve()
-    if (g := _gate(root)) is not None:
-        return g
     target = Path(args.file) if args.file else core.default_agents_target(root, args.scope)
     res = core.detach_agents(target, dry_run=args.dry_run)
     msg = {"absent": f"[无文件] {res['path']}",
