@@ -56,25 +56,31 @@ def _ask(prompt: str, default: str = "") -> str:
 
 
 def explain_text(root: Path) -> str:
-    """向用户展示意图：做什么、建什么、不碰什么、怎么卸。"""
+    """向用户展示意图：好处先行，成本其次，边界兜底。"""
     cands = core.detect_candidates(root)
     hint = cands[0]["path"] if cands else str(root)
-    return f"""\n【gov-hub 初始化说明】（如需再看: python govhub.py init --explain）
+    return f"""\n【让 AI 记住这个项目】（如需再看: python govhub.py init --explain）
 
-它解决什么问题：agent 在项目里经常不知道该读哪个文件，做完活产出也没人知道。
-gov-hub 给项目装一张机读路由表：agent 动手前先查表直达权威文件，收尾时产出自动提醒登记。
+用之前的常见情况：
+  你问"X 功能的结论/实现在哪"，AI 只能翻文件夹猜——读一堆无关文件，还可能答错；
+  AI 干完活，结论散在聊天记录里，下次会话（或换个 AI）就丢了。
 
-初始化只做两件事（一次，约 1 分钟）：
-  1. 写 gov-hub.yaml   —— 声明治理范围（探测到候选: {hint}），你确认后才生效
-  2. 写 registry.yaml  —— 路由表骨架，含 2 条示例条目，你填真实资产后删除示例
+启用之后的差别：
+  · AI 干活前先查一张"项目记忆表"，一行直达该读哪个文件、它能回答什么；
+  · AI 干完活，系统提醒它把新产出的位置和结论补进记忆表；
+  · 记忆表越用越厚，新会话冷启动越来越快——项目的经验留在项目里。
 
-三条边界（写进代码，不靠承诺）：
-  - 只新增文件，不改写、不删除你的任何既有文件
-  - 所有命令只读你的项目内容，不联网、不上传
-  - 产出索引 .govhub/ 可随时删，自动重建
+启用只做两件事（一次，约 1 分钟）：
+  1. 写 gov-hub.yaml   —— 一份范围说明：AI 只在 {hint} 内活动，你确认才生效
+  2. 写 registry.yaml  —— 项目记忆表骨架，含 2 条示例条目，填真实内容后删示例
 
-后悔成本：删除上面三个文件 = 完全卸载，项目恢复原样。
-不做会怎样：不装没有任何影响，agent 退回蛮力翻文件的方式。\n"""
+三条硬边界（写进代码，不靠承诺）：
+  - 只新增这 2 个文件，不改写、不删除你的任何既有文件
+  - 只读本机项目内容，不联网、不上传任何东西
+  - 缓存目录 .govhub/ 可随时删，自动重建
+
+后悔成本：删掉这 2 个文件 = 完全卸载，项目恢复原样。
+不启用：没有任何影响，AI 维持现状。\n"""
 
 
 def _gate(root: Path) -> int | None:
@@ -84,7 +90,8 @@ def _gate(root: Path) -> int | None:
               f"不再提示；用户反悔可删除该文件或运行 init --main . --override。")
         return 2
     if core.load_config(root) is None:
-        print("[UNDECLARED] 本区未声明治理范围。向用户展示以下说明后询问一次"
+        print("[UNDECLARED] 本区还没有\"项目记忆表\"（AI 找文件靠翻、产出不归档）。"
+              "向用户展示以下说明后询问一次"
               "（同意 → init --main <路径>；拒绝/跳过 → init --decline，之后不再问）：")
         print(explain_text(root))
         return 2
