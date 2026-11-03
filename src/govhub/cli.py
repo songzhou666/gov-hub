@@ -191,6 +191,7 @@ def cmd_lookup(args: argparse.Namespace) -> int:
     if not hits:
         print(f"未命中。试试登记表里已有的关键词，或先 check 同步索引。{note}")
         return 1
+    core.record_trail(root, cfg, args.terms, hits[0])  # 走过就留迹：起点→终点自动上地图
     for e in hits:
         print(f"  [{e['score']:5}] {e['id']} · {e['authority']} · {e['path']}")
         print(f"         {e['title']} —— {e['answers']}")

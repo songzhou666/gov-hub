@@ -225,6 +225,23 @@ def registry_changed(root: Path, cfg: dict[str, Any], index: dict[str, Any]) -> 
     return registry_signature(load_registry(root, cfg)) != index.get("registry_signature", "")
 
 
+def record_trail(root: Path, cfg: dict[str, Any], terms: list[str],
+                 top_hit: dict[str, Any]) -> None:
+    """路线迹：lookup 命中即自动记录 起点(查询词)→终点(权威文件)。
+    写 .govhub/trail.jsonl（generated，可删）；失败静默——迹是增益，不是依赖。"""
+    try:
+        main = resolve_root(root, cfg["scope"]["roots"][0])
+        idx_dir = main / INDEX_DIR
+        idx_dir.mkdir(exist_ok=True)
+        rec = {"ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+               "terms": " ".join(terms),
+               "dest": f"{top_hit.get('id')}|{top_hit.get('path')}"}
+        with open(idx_dir / "trail.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
 def search(index: dict[str, Any], terms: list[str], limit: int = 12) -> list[dict[str, Any]]:
     """关键词 → 资产单元：分层打分（相等满分、包含半分），权威级并列排序。"""
     toks = [t.strip().lower() for t in terms if t.strip()]
