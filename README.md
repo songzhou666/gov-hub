@@ -4,6 +4,12 @@
 >
 > **状态：0.1.0 MVP（loose 档可用）**
 
+**为什么用它**：真实项目实测，AI 找文件的导航成本**降低 96.7%~99.3%**
+（10 个高频查询，蛮力 62.4 万 chars vs 地图 4.2 千 chars，含读目标文件的保守口径）
+——数据与图表见 [docs/PERFORMANCE.md](docs/PERFORMANCE.md)。
+
+![导航成本对照](docs/assets/perf_chart.png)
+
 ## 快速上手（MVP）
 
 ```bash

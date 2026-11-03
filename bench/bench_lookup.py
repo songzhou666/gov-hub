@@ -104,6 +104,48 @@ def main() -> None:
     print("\n".join(lines))
     print(f"\n已写入 {out}")
 
+    # 图表：有图有真相（matplotlib 可选依赖，缺失只跳过画图）
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from matplotlib import font_manager
+        for f in ("Microsoft YaHei", "SimHei"):
+            if any(f.lower() in font_manager.FontProperties(family=f).get_name().lower()
+                   for _ in [0]) or True:
+                plt.rcParams["font.sans-serif"] = [f, "DejaVu Sans"]
+                break
+        plt.rcParams["axes.unicode_minus"] = False
+        qs = [r[0] for r in rows]
+        bs = [r[1] for r in rows]
+        as_ = [r[2] for r in rows]
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
+        x = range(len(qs))
+        ax1.bar([i - 0.2 for i in x], bs, 0.4, label="蛮力导航", color="#d9534f")
+        ax1.bar([i + 0.2 for i in x], as_, 0.4, label="项目地图", color="#5cb85c")
+        ax1.set_yscale("log")
+        ax1.set_xticks(list(x), qs, rotation=30)
+        ax1.set_ylabel("导航成本（chars，对数轴）")
+        ax1.set_title(f"单查询导航成本对照（合计降低 {100*(tot_b-tot_a)/tot_b:.1f}%）")
+        ax1.legend()
+        cum_b, cum_a, sb, sa = [], [], 0, 0
+        for b, a in zip(bs, as_):
+            sb += b; sa += a
+            cum_b.append(sb); cum_a.append(sa)
+        ax2.plot(qs, cum_b, "o-", color="#d9534f", label="蛮力导航（累计）")
+        ax2.plot(qs, cum_a, "s-", color="#5cb85c", label="项目地图（累计）")
+        ax2.set_ylabel("累计导航成本（chars）")
+        ax2.set_title(f"累计消耗：{tot_b//1000}k vs {tot_a//1000}k chars")
+        ax2.tick_params(axis="x", rotation=30)
+        ax2.legend()
+        fig.tight_layout()
+        chart = Path(__file__).resolve().parent.parent / "docs" / "assets" / "perf_chart.png"
+        chart.parent.mkdir(exist_ok=True)
+        fig.savefig(chart, dpi=110)
+        print(f"图表已写入 {chart}")
+    except ImportError:
+        print("（未装 matplotlib，跳过图表）")
+
 
 if __name__ == "__main__":
     main()
