@@ -360,6 +360,29 @@ def cmd_detach(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_ensure(args: argparse.Namespace) -> int:
+    """第 0 步：唯一的入口命令，把"是否要问用户"变成命令输出，不交给模型判断。
+
+    已启用 → [OK] 继续干活；已拒绝 → [MUTED] 静默继续；
+    未声明 → 打印欢迎说明 + [NEXT] 指令（含三岔口原文），模型下一步只需调用提问工具。
+    """
+    root = Path(args.root or ".").resolve()
+    if core.declined(root):
+        print("[MUTED] 本区已声明不启用项目地图；按项目原有方式继续，不要再提。")
+        return 0
+    if core.load_config(root) is not None:
+        print("[OK] 本区已启用项目地图。动手前先 lookup，别蛮力翻目录。")
+        return 0
+    print(explain_text(root))
+    print("[NEXT] 上面这段话请完整展示给用户，然后**立刻**调用 ask_user_question（正文里问不产生弹窗），"
+          "选项如下：")
+    print("  1. 启用（推荐） → 你运行：PYTHON CLI_PATH init --main <本工作区>，"
+          "再把本轮已读过的权威文件用 add 逐条登记")
+    print("  2. 暂不启用，别再问 → 你运行：PYTHON CLI_PATH init --decline")
+    print("  3. 这次先不用 → 不写任何文件，继续回答")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(prog="govhub", description="gov-hub 治理骨架 CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -404,6 +427,9 @@ def main() -> int:
     p.add_argument("--authority", default="canonical",
                    choices=["canonical", "derived", "generated"])
     p.set_defaults(fn=cmd_add)
+    p = sub.add_parser("ensure", help="第 0 步入口检查：已启用/已拒绝/未声明，未声明时直接给出提问指令")
+    p.add_argument("--root", default=".")
+    p.set_defaults(fn=cmd_ensure)
     p = sub.add_parser("attach", help="把入口块写进 AGENTS.md（标记块/幂等/可 detach 还原）")
     p.add_argument("--root", default=".")
     p.add_argument("--scope", default="project", choices=["project", "user"],
