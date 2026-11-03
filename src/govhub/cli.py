@@ -219,6 +219,25 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0 if state["check"]["ok"] else 1
 
 
+def cmd_suggest(args: argparse.Namespace) -> int:
+    root = Path(args.root or ".").resolve()
+    if (g := _gate(root)) is not None:
+        return g
+    cfg = core.load_config(root)
+    props = core.suggest_proposals(root, cfg, min_hits=args.min)
+    if not props:
+        print("暂无提案：路线迹里还没有高频路线（同一目标被查到 ≥N 次才会提炼）。")
+        return 0
+    print(f"根据路线迹提炼出 {len(props)} 条登记提案（仅提案，确认后请手工改 registry.yaml）：\n")
+    for p in props:
+        print(f"[{p['kind']}] {p['id']} · {p['path']}")
+        print(f"  依据：被查 {len(p['suggest_keywords'])} 次以上，查法：{p['suggest_keywords']}")
+        print(f"  建议 YAML：\n{p['yaml']}\n")
+    if args.json:
+        print(json.dumps(props, ensure_ascii=False, indent=2))
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(prog="govhub", description="gov-hub 治理骨架 CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -247,5 +266,10 @@ def main() -> int:
     p.add_argument("--root", default=".")
     p.add_argument("--json", action="store_true")
     p.set_defaults(fn=cmd_status)
+    p = sub.add_parser("suggest", help="从路线迹提炼登记提案（提案制，不改盘）")
+    p.add_argument("--root", default=".")
+    p.add_argument("--min", type=int, default=2, help="同一终点最少命中次数")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(fn=cmd_suggest)
     args = ap.parse_args()
     return args.fn(args)

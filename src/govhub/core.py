@@ -242,6 +242,60 @@ def record_trail(root: Path, cfg: dict[str, Any], terms: list[str],
         pass
 
 
+def load_trail(root: Path, cfg: dict[str, Any]) -> list[dict[str, str]]:
+    """读路线迹（generated，缺失返回空）。"""
+    main = resolve_root(root, cfg["scope"]["roots"][0])
+    path = main / INDEX_DIR / "trail.jsonl"
+    if not path.is_file():
+        return []
+    out = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return out
+
+
+def suggest_proposals(root: Path, cfg: dict[str, Any], min_hits: int = 2) -> list[dict[str, Any]]:
+    """从路线迹提炼登记提案（只提案，不落盘——提案制）。
+
+    规则：同一终点被 ≥min_hits 次查到 → 建议把用户实际的查法（terms）
+    补进该条目的 keywords，或新建条目草稿。
+    """
+    reg = load_registry(root, cfg)
+    known = {str(e.get("id")): e for e in reg["entries"]}
+    routes: dict[str, dict[str, set[str]]] = {}
+    for t in load_trail(root, cfg):
+        dest = str(t.get("dest", ""))
+        if "|" not in dest:
+            continue
+        eid, path = dest.split("|", 1)
+        routes.setdefault(eid, {"path": path, "terms": set()})
+        routes[eid]["terms"].add(str(t.get("terms", "")).strip())
+    proposals = []
+    for eid, r in sorted(routes.items(), key=lambda kv: -len(kv[1]["terms"])):
+        if len(r["terms"]) < min_hits:
+            continue
+        terms = sorted(r["terms"])
+        e = known.get(eid)
+        if e is not None:
+            new_kw = [t for t in terms if t not in [str(k) for k in e.get("keywords", [])]]
+            if not new_kw:
+                continue
+            proposals.append({"kind": "补充关键词", "id": eid, "path": r["path"],
+                              "suggest_keywords": new_kw,
+                              "yaml": f"  keywords: {list(e.get('keywords', [])) + new_kw}"})
+        else:
+            proposals.append({"kind": "新建条目草稿", "id": eid, "path": r["path"],
+                              "suggest_keywords": terms,
+                              "yaml": (f"- id: {eid.split('.')[0]}.draft\n"
+                                       f"  type: asset\n  title: （待填）\n  path: {r['path']}\n"
+                                       f"  keywords: {terms}\n  answers: （待填）\n"
+                                       f"  authority: canonical")})
+    return proposals
+
+
 def search(index: dict[str, Any], terms: list[str], limit: int = 12) -> list[dict[str, Any]]:
     """关键词 → 资产单元：分层打分（相等满分、包含半分），权威级并列排序。"""
     toks = [t.strip().lower() for t in terms if t.strip()]
