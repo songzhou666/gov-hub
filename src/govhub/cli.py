@@ -55,22 +55,47 @@ def _ask(prompt: str, default: str = "") -> str:
         return default
 
 
+def explain_text(root: Path) -> str:
+    """向用户展示意图：做什么、建什么、不碰什么、怎么卸。"""
+    cands = core.detect_candidates(root)
+    hint = cands[0]["path"] if cands else str(root)
+    return f"""\n【gov-hub 初始化说明】（如需再看: python govhub.py init --explain）
+
+它解决什么问题：agent 在项目里经常不知道该读哪个文件，做完活产出也没人知道。
+gov-hub 给项目装一张机读路由表：agent 动手前先查表直达权威文件，收尾时产出自动提醒登记。
+
+初始化只做两件事（一次，约 1 分钟）：
+  1. 写 gov-hub.yaml   —— 声明治理范围（探测到候选: {hint}），你确认后才生效
+  2. 写 registry.yaml  —— 路由表骨架，含 2 条示例条目，你填真实资产后删除示例
+
+三条边界（写进代码，不靠承诺）：
+  - 只新增文件，不改写、不删除你的任何既有文件
+  - 所有命令只读你的项目内容，不联网、不上传
+  - 产出索引 .govhub/ 可随时删，自动重建
+
+后悔成本：删除上面三个文件 = 完全卸载，项目恢复原样。
+不做会怎样：不装没有任何影响，agent 退回蛮力翻文件的方式。\n"""
+
+
 def _gate(root: Path) -> int | None:
-    """入口闸：已拒绝 → 静默退出（agent 不再询问）；未声明 → 引导一次性询问协议。"""
+    """入口闸：已拒绝 → 静默退出；未声明 → 展示意图 + 引导一次性询问。"""
     if core.declined(root):
         print(f"[MUTED] 本区已声明不启用治理（{core.DECLINE_NAME}）。"
               f"不再提示；用户反悔可删除该文件或运行 init --main . --override。")
         return 2
     if core.load_config(root) is None:
-        print(f"[UNDECLARED] 本区未声明治理范围（无 {core.CONFIG_NAME}）。"
-              f"向用户说明并询问一次：同意 → init --main <探测路径>；"
-              f"拒绝/跳过 → init --decline 落标记，之后不再询问。")
+        print("[UNDECLARED] 本区未声明治理范围。向用户展示以下说明后询问一次"
+              "（同意 → init --main <路径>；拒绝/跳过 → init --decline，之后不再问）：")
+        print(explain_text(root))
         return 2
     return None
 
 
 def cmd_init(args: argparse.Namespace) -> int:
     root = Path(args.root or ".").resolve()
+    if args.explain:
+        print(explain_text(root))
+        return 0
     if args.decline:
         (root / core.DECLINE_NAME).write_text(
             f"declined: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
@@ -186,6 +211,8 @@ def main() -> int:
     p.add_argument("--root", default=".", help="工作区根")
     p.add_argument("--main", default="", help="显式指定主工作区（跳过交互，agent/脚本用）")
     p.add_argument("--extra", default="", help="旁挂目录，逗号分隔（配合 --main）")
+    p.add_argument("--explain", action="store_true",
+                   help="只打印初始化意图说明，不做任何操作")
     p.add_argument("--decline", action="store_true",
                    help="记录用户拒绝：写 gov-hub.declined，治理命令此后静默")
     p.add_argument("--override", action="store_true",
