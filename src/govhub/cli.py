@@ -14,25 +14,21 @@ from . import core
 
 REGISTRY_TEMPLATE = """# gov-hub 登记表：关键词 -> 资产单元 -> 权威文件 的机读路由。
 # authority: canonical（SSOT）| derived（派生）| generated（可重建，永不作权威引用）
+#
+# 条目用命令登记最省事（agent 找到权威文件后立即调用）：
+#   govhub add <文件> --keywords 词1,词2 --answers "这条能回答什么"
+# 也可手工复制下面示例改：
+# - id: rule.example
+#   type: rule
+#   title: 示例规则（改我）
+#   path: rules/example.md
+#   keywords: [示例, example]
+#   answers: 这条资产能回答什么问题（一行）
+#   authority: canonical
+#   updated: '{today}'
 version: 1
 updated: '{today}'
-entries:
-- id: rule.example          # 类型_主题；查这条用: govhub lookup example
-  type: rule
-  title: 示例规则（改我）
-  path: rules/example.md    # 相对主工作区根；填好后跑 govhub check 验证
-  keywords: [示例, example]
-  answers: 这条资产能回答什么问题（一行）
-  authority: canonical
-  updated: '{today}'
-- id: asset.example-doc
-  type: asset
-  title: 示例文档（删我）
-  path: docs/example.md
-  keywords: [文档]
-  answers: 第二条示例，建好真实条目后删除本条
-  authority: canonical
-  updated: '{today}'
+entries: []
 """
 
 
@@ -239,6 +235,81 @@ def cmd_suggest(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_add(args: argparse.Namespace) -> int:
+    """登记一条资产（单命令，免手改 YAML）：agent 找到权威文件后立即调用。"""
+    root = Path(args.root or ".").resolve()
+    if (g := _gate(root)) is not None:
+        return g
+    cfg = core.load_config(root)
+    main = core.resolve_root(root, cfg["scope"]["roots"][0])
+    target = Path(args.path)
+    if not target.is_absolute():
+        target = main / target
+    target = target.resolve()
+    if not target.exists():
+        print(f"[FAIL] 文件不存在：{target}")
+        return 1
+    try:
+        rel = target.relative_to(main).as_posix()
+    except ValueError:
+        print(f"[FAIL] 不在主工作区 {main} 内（scope 外的文件不登记）：{target}")
+        return 1
+    reg_path = main / core.REGISTRY_NAME
+    text = reg_path.read_text(encoding="utf-8")
+    old_text = text
+    reg = core.load_registry(root, cfg)
+    norm = {str(e.get("path", "")).strip().replace("\\", "/") for e in reg["entries"]}
+    if rel in norm:
+        print(f"[跳过] 该文件已在登记表里：{rel}（要补关键词请直接编辑该条目）")
+        return 0
+    stem = target.stem
+    eid = args.id.strip()
+    if not eid:
+        slug = "".join(ch if ch.isalnum() else "-" for ch in stem.lower()).strip("-")
+        slug = "-".join(x for x in slug.split("-") if x)
+        if not slug or not slug.isascii():
+            import hashlib
+            slug = "doc-" + hashlib.sha1(rel.encode("utf-8")).hexdigest()[:8]
+        eid = f"{args.type}.{slug}"
+    known_ids = {str(e.get("id")) for e in reg["entries"]}
+    if eid in known_ids:
+        import hashlib
+        eid = f"{eid}-{hashlib.sha1(rel.encode('utf-8')).hexdigest()[:4]}"
+    kws = [k.strip() for k in args.keywords.replace("，", ",").split(",") if k.strip()] or [stem]
+    today = datetime.now().strftime("%Y-%m-%d")
+    block = (f"- id: {eid}\n"
+             f"  type: {args.type}\n"
+             f"  title: {args.title or stem}\n"
+             f"  path: {rel}\n"
+             f"  keywords: [{', '.join(kws)}]\n"
+             f"  answers: {args.answers or '（待补：这条能回答什么问题）'}\n"
+             f"  authority: {args.authority}\n"
+             f"  updated: '{today}'\n")
+    if not text.endswith("\n"):
+        text += "\n"
+    import re as _re
+    empty_entries = _re.search(r"^entries:\s*\[\s*\]\s*$", text, _re.M)
+    if empty_entries:  # 空表：把 entries: [] 换成 entries: + 首条，避免 YAML 结构冲突
+        start, end = empty_entries.span()
+        text = text[:start] + "entries:\n" + block + text[end:].lstrip("\n")
+    else:
+        text += block
+    reg_path.write_text(text, encoding="utf-8")
+    result = core.check_registry(root, cfg)
+    if not result["ok"]:
+        reg_path.write_text(old_text, encoding="utf-8")  # 回滚，不留坏登记表
+        print("[FAIL] 登记后机检不通过，已回滚：")
+        for p in result["problems"]:
+            print(f"  {p}")
+        return 1
+    core.build_index(root, cfg)
+    print(f"已登记 → {eid}")
+    print(f"  {rel}")
+    print(f"  keywords: {kws} · authority: {args.authority}")
+    print("机检通过 ✅ 索引已同步。")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(prog="govhub", description="gov-hub 治理骨架 CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -272,6 +343,17 @@ def main() -> int:
     p.add_argument("--min", type=int, default=2, help="同一终点最少命中次数")
     p.add_argument("--json", action="store_true")
     p.set_defaults(fn=cmd_suggest)
+    p = sub.add_parser("add", help="登记一条资产（单命令，自动机检+同步索引）")
+    p.add_argument("path", help="权威文件路径（相对主工作区根或绝对路径）")
+    p.add_argument("--root", default=".")
+    p.add_argument("--title", default="", help="条目标题（默认为文件名）")
+    p.add_argument("--keywords", default="", help="逗号分隔；含用户本次的实际问法")
+    p.add_argument("--answers", default="", help="这条能回答什么问题（一行）")
+    p.add_argument("--id", default="", help="条目 id（默认按文件名自动生成）")
+    p.add_argument("--type", default="asset", help="条目类型（默认 asset）")
+    p.add_argument("--authority", default="canonical",
+                   choices=["canonical", "derived", "generated"])
+    p.set_defaults(fn=cmd_add)
     args = ap.parse_args()
     return args.fn(args)
 

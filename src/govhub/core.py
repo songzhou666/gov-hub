@@ -337,6 +337,10 @@ def search(index: dict[str, Any], terms: list[str], limit: int = 12) -> list[dic
                         total += weight
                     elif tok in v:
                         total += weight / 2
+                    elif v in tok:
+                        # 反方向包含：agent 常把整句问法丢进来（如"登录验证码那里发现了什么问题"），
+                        # 此时登记关键词 ⊂ 查询词，也应命中（给半分，精确匹配仍优先）
+                        total += weight / 2
         if total > 0:
             scored.append((total, AUTH_RANK.get(str(e.get("authority")), 9), e))
     scored.sort(key=lambda x: (-x[0], x[1]))

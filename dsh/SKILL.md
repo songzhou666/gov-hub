@@ -30,25 +30,30 @@ description: 当需要查找项目内容时加载——包括"某功能/结论/�
 
 ## 动手前（供给）
 ```bash
-PYTHON CLI_PATH lookup <关键词> --root <工作区>
+PYTHON CLI_PATH lookup <关键词或整句问法> --root <工作区>
 ```
 - 命中 → 读列出的权威文件，不蛮力翻文件夹；
 - `[UNDECLARED]` → 先向用户展示 `init --explain` 说明并**询问一次**：
   同意 → `init --main <探测路径>`；拒绝/跳过 → `init --decline`，此后本项目永久静默、不得再提；
 - `[MUTED]` → 用户已拒绝，静默跳过，一切按项目原有方式干活。
+- 问到"上一次会话聊了什么/我们之前讨论过什么"——**项目地图不含对话内容**，只有工作区文件；
+  如实告诉用户这一点，不要为回忆对话去翻会话日志或 `.dsh/sessions` 目录。
 
-## 回灌（每次会话的收尾动作，两个来源都要登记）
+## 回灌（回答完立即做，不要留到"会话收尾"——实测会忘）
 
-1. **新增/移动了重要文件** → 在 registry.yaml 补条目；
-2. **回答问题时用到了地图上没有的文件**（lookup 未命中、靠浏览找到的权威文件）
-   → **必须**把该文件登记成新条目（id/type/title/path/keywords/answers/authority/updated
-   八字段齐全，keywords 里加用户本次的实际问法）——这是地图生长的主要方式；
-   只读的临时/生成文件登记 authority: generated 或不登记。
-3. 登记后跑 `PYTHON CLI_PATH check --root <工作区>` 验证（全绿才算改完）。
+**凡是你靠翻文件找到答案、而该文件不在地图上 → 立刻单命令登记：**
+
+```bash
+PYTHON CLI_PATH add <文件相对路径> --root <工作区> \
+  --keywords 用户本次的实际问法,主题词1,主题词2 \
+  --answers "这条能回答什么问题（一行）"
+```
+登记会自动机检并同步索引；新增/移动文件同理。只读的临时/生成文件用
+`--authority generated`（或不登记）。
 
 ## 会话收尾（体检）
 `PYTHON CLI_PATH status --root <工作区>` 看四灯；`PYTHON CLI_PATH suggest --root <工作区>`
-看路线迹里有没有高频路线值得补关键词。
+看路线迹里的高频路线与**覆盖缺口**（问了多次但地图没有的主题）。
 
 ## 文案纪律
 对用户只说"项目地图"，禁用"治理/登记表/回灌"等内部词；完整口径见仓库 `docs/UX_COPY.md`。
