@@ -8,6 +8,10 @@
 （10 个高频查询，蛮力 62.4 万 chars vs 地图 4.2 千 chars，含读目标文件的保守口径）
 ——数据与图表见 [docs/PERFORMANCE.md](docs/PERFORMANCE.md)。
 
+**端到端也验证过**：真实 dogfood 会话里，同一类问题走地图命中后
+**23~75 秒答完（4~10 次调用）**；不走地图蛮力翻要 **3 分多钟、最多 40 次调用**，
+tokens 相差最高 **≈6.8 倍**——完整对照表见 [bench/RESULTS.md](bench/RESULTS.md)。
+
 ![导航成本对照](docs/assets/perf_chart.png)
 
 ## 快速上手（MVP）
