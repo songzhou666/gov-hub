@@ -6,6 +6,10 @@ Give your AI agent a **project map**: instead of brute-force scanning folders to
 
 > Measured on real workspaces: navigation cost cut by **96.7%~99.3%**; end-to-end Q&A from **141s / 40 tool calls → 40s / 5 calls** (up to 5.8× faster, 8× fewer calls). Full data: [`bench/RESULTS.md`](bench/RESULTS.md).
 
+![Navigation cost: brute-force scan vs project map (10 hot queries)](docs/assets/perf_chart_en.png)
+
+*Left: per-query navigation cost ranges (718~108,000 chars brute-force vs 124~476 chars via `lookup`, up to 287×). Right: 10-query cumulative total, 624,262 → 4,173 chars (−99.3%; ≈375k → ≈2.5k tokens). Same-question end-to-end comparison across sessions: no map 141s+/40 calls → map enabled + backfill → direct hit 40s/5 calls. Conservative metric — includes reading the target file itself. Details: [`bench/RESULTS.md`](bench/RESULTS.md) · [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md).*
+
 ## Why
 
 Agents forget where things live in *your* workspace. Every session re-pays the same discovery cost — globbing, grepping, reading dead ends — and tokens burn on navigation instead of answers. gov-hub moves that knowledge into a plain, human-readable registry (`registry.yaml`) that lives **inside your workspace**, plus a tiny stdlib-only CLI that keeps it honest.
