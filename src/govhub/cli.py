@@ -404,7 +404,7 @@ def cmd_install(args: argparse.Namespace) -> int:
     skill_root = Path(args.skill_dir) if args.skill_dir else _default_skill_root(args.scope, root)
     dest_dir = skill_root / "gov-hub"
     dest = dest_dir / "SKILL.md"
-    src = Path(__file__).resolve().parents[2] / "dsh" / "SKILL.md"
+    src = Path(__file__).resolve().parents[2] / "SKILL.md"
     if not src.exists():
         print(f"[FAIL] 找不到技能文件：{src}")
         return 1

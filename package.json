@@ -1,0 +1,49 @@
+{
+  "name": "gov-hub",
+  "description": "Agent 工作台的项目地图：让 AI 直达权威文件而不是蛮力翻文件夹，实测导航成本降低 96.7%~99.3%。",
+  "version": "0.3.0",
+  "author": "songzhou666",
+  "icon": "./icon.svg",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/songzhou666/gov-hub.git"
+  },
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "SKILL.md",
+    "references/",
+    "govhub.py",
+    "src/",
+    "lib/index.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh",
+    "skill",
+    "project-map",
+    "lookup",
+    "agent",
+    "项目地图"
+  ],
+  "license": "MIT",
+  "engines": {
+    "dsh": ">=0.2.0-rc.1"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

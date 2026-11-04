@@ -30,6 +30,12 @@ python govhub.py install --scope project   # 或仅本项目
 python govhub.py uninstall
 ```
 
+**其它分发形态**（同一份技能文件，任选）：
+- **DSH 原生 bundle**：仓库根 `package.json` 声明 `dsh.bundle`，可被 DSH 的 Discover /
+  plugin market index 收录，或 `install_bundle` 直接指定本仓库 Git URL；
+- **SkillHub**：根 `SKILL.md` 携带完整发布元数据（name/displayName/version/category/x-astron-*），
+  整目录上传即符合发布规范；`references/` 渐进式披露，TRACE 五维自检通过。
+
 装完即全自动：会话里问"XX 在哪个文件 / 结论在哪"，agent 自动
 `ensure → lookup → 直达权威文件`，答完顺手把新读到的权威文件 `add` 回地图。
 
