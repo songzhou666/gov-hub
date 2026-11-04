@@ -1,6 +1,6 @@
 # gov-hub · 项目地图（Project Map for Agent Workspaces）
 
-English | [中文](README.md)
+[English](README.en.md) | 中文
 
 > Agent 工作台的**治理骨架**：知识供给 → 执行 → 产出 → 回灌，四段链路可感知、可审计、可自启。
 >
