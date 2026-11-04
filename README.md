@@ -20,7 +20,7 @@ tokens 相差最高 **≈6.8 倍**。同题三代对照（无地图 → 启用�
 
 ```bash
 # 1. 获取（任选其一）
-git clone https://github.com/songzhou/gov-hub.git   # 或下载 zip 解压到任意目录
+git clone https://github.com/songzhou666/gov-hub.git   # 或下载 zip 解压到任意目录
 
 # 2. 一键安装：SKILL.md 进技能发现根 + 入口块进 AGENTS.md + 自检
 python govhub.py install                   # 用户级（推荐），所有会话生效
