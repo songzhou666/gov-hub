@@ -1,8 +1,10 @@
-# gov-hub
+# gov-hub · 项目地图（Project Map for Agent Workspaces）
+
+English | [中文](README.md)
 
 > Agent 工作台的**治理骨架**：知识供给 → 执行 → 产出 → 回灌，四段链路可感知、可审计、可自启。
 >
-> **状态：0.2.0（loose 档 + ensure 入口 + 一键安装）**
+> **状态：0.3.0（loose 档 + ensure 入口 + 一键安装 + 双路分发）**
 
 **为什么用它**：真实项目实测，AI 找文件的导航成本**降低 96.7%~99.3%**
 （10 个高频查询，蛮力 62.4 万 chars vs 地图 4.2 千 chars，含读目标文件的保守口径）
@@ -77,17 +79,17 @@ songzhou
 
 ## 安装（DSH 用户级 skill 薄壳）
 
-把 `dsh/SKILL.md` 拷到你的 DSH 用户级 skills 目录：
+推荐用一键安装（自动完成以下两步 + 自检）：
 
 ```bash
-# Windows（DSH_HOME 默认 ~/.dsh；若设置了 DSH_HOME 环境变量则用它的 skills 子目录）
-mkdir -p "$env:DSH_HOME\skills\gov-hub"   # 默认即 $env:USERPROFILE\.dsh\skills\gov-hub
-copy dsh\SKILL.md "$env:DSH_HOME\skills\gov-hub\SKILL.md"
+python govhub.py install                # 用户级：SKILL.md → $DSH_HOME/skills/gov-hub/，入口块 → $DSH_HOME/AGENTS.md
+python govhub.py install --scope project  # 或仅本项目（.dsh/skills/）
+python govhub.py uninstall              # 完全可逆；工作区数据不受影响
 ```
 
-新会话的 skill 目录出现 `gov-hub` 即装好；卸载 = 删这一个文件。
-注意：CLI 本体（本仓库）路径会被 SKILL.md 正文引用，请保持仓库在固定位置，
-或按你实际的克隆路径修改 SKILL.md 中的命令路径。
+也可手动：把根目录 `SKILL.md` 拷到 `$DSH_HOME/skills/gov-hub/SKILL.md` 即装好；
+卸载 = 删这一个文件。CLI（`govhub.py`）就在本仓库里，SKILL.md 正文按
+"与本文件同目录"定位它，无需改路径。
 
 ## 用户体验口径
 
@@ -136,7 +138,7 @@ gov-hub/
 │   ├── SENSITIVITY_CHECKLIST.md   # 发布前脱敏核对清单
 │   └── COLD_START.md              # 冷启动坡道设计（种子语料 / 第一天全绿剧本）
 ├── seeds/                         # 虚构示例工作区（冷启动夹具，含故意命乱的目录）
-└── src/                           # 通用层实现（0.1.0 前不编码）
+└── src/                           # 通用层实现
 ```
 
 ## License
