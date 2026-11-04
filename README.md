@@ -10,7 +10,9 @@
 
 **端到端也验证过**：真实 dogfood 会话里，同一类问题走地图命中后
 **23~75 秒答完（4~10 次调用）**；不走地图蛮力翻要 **3 分多钟、最多 40 次调用**，
-tokens 相差最高 **≈6.8 倍**——完整对照表见 [bench/RESULTS.md](bench/RESULTS.md)。
+tokens 相差最高 **≈6.8 倍**。同题三代对照（无地图 → 启用回灌 → 命中直达：
+141s+/40 次调用 → **40s/5 次调用**）证明"第一问喂地图，第二问省钱"——
+完整数据见 [bench/RESULTS.md](bench/RESULTS.md)。
 
 ![导航成本对照](docs/assets/perf_chart.png)
 
