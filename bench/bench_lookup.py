@@ -9,6 +9,7 @@ token 估算：中文混合文本按 chars×0.6 粗估，仅作量级参考。
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -17,7 +18,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 from govhub import core  # noqa: E402
 
-ASSETS = Path(r"E:\AI_TEST\test_assets")          # 被测真实资产区（只读）
+ASSETS = Path(os.environ.get("GOVHUB_BENCH_ASSETS", r"<被测工作区>\test_assets"))  # 被测资产区（只读），路径经环境变量注入
 REG_PATH = ASSETS / "_registry.yaml"
 
 
