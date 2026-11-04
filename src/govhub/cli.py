@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -383,6 +385,80 @@ def cmd_ensure(args: argparse.Namespace) -> int:
     return 0
 
 
+def _default_skill_root(scope: str, root: Path) -> Path:
+    """技能发现根：user=$DSH_HOME/skills（env DSH_HOME 或 ~/.dsh）；project=<root>/.dsh/skills。"""
+    if scope == "project":
+        return root / ".dsh" / "skills"
+    dsh_home = os.environ.get("DSH_HOME") or str(Path.home() / ".dsh")
+    return Path(dsh_home) / "skills"
+
+
+def cmd_install(args: argparse.Namespace) -> int:
+    """一键安装：SKILL.md 复制到技能发现根 + attach 入口块 + 自检。
+
+    新用户拿到仓库后的第一条命令；全部动作可被 uninstall 精确撤销。
+    """
+    root = Path(args.root or ".").resolve()
+    cli = _cli_path()
+    python = args.python or sys.executable
+    skill_root = Path(args.skill_dir) if args.skill_dir else _default_skill_root(args.scope, root)
+    dest_dir = skill_root / "gov-hub"
+    dest = dest_dir / "SKILL.md"
+    src = Path(__file__).resolve().parents[2] / "dsh" / "SKILL.md"
+    if not src.exists():
+        print(f"[FAIL] 找不到技能文件：{src}")
+        return 1
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    if args.dry_run:
+        print(f"[dry-run] 技能将安装到 {dest}")
+    else:
+        shutil.copyfile(src, dest)
+        print(f"已安装技能 → {dest}")
+    print("  （description 即路由：找文件/找结论类问题会被自动发现；正文是操作手册，按需加载）")
+
+    # attach 入口块（scope 同步：user 块 → 用户级；project → 项目级）
+    target = core.default_agents_target(root, args.scope)
+    block = core.agents_block(python, cli)
+    res = core.attach_agents(target, block, dry_run=args.dry_run)
+    if res["action"] != "no-change":
+        verb = {"created": "已创建并写入", "inserted": "已插入入口块到", "updated": "已更新入口块于"}.get(
+            res["action"], "已写入")
+        print(f"{verb} {res['path']}" + ("（dry-run，未落盘）" if args.dry_run else ""))
+    else:
+        print(f"[已是最新] {res['path']}")
+    scope_desc = "用户级（所有会话生效）" if args.scope == "user" else "项目级"
+    print(f"  入口块作用域：{scope_desc}；撤销：govhub.py uninstall")
+
+    print("\n自检：")
+    print(f"  CLI：{python} \"{cli}\" ensure --root <工作区>")
+    print("  三态预期：[OK]/[MUTED]/欢迎+[NEXT]。装完即可在任意会话直接提问测试。")
+    return 0
+
+
+def cmd_uninstall(args: argparse.Namespace) -> int:
+    """撤销 install：移除技能目录 + detach 入口块。MUTED/未声明状态下也必须可用。"""
+    root = Path(args.root or ".").resolve()
+    skill_root = Path(args.skill_dir) if args.skill_dir else _default_skill_root(args.scope, root)
+    dest_dir = skill_root / "gov-hub"
+    if dest_dir.exists():
+        if args.dry_run:
+            print(f"[dry-run] 技能目录将被移除：{dest_dir}")
+        else:
+            shutil.rmtree(dest_dir)
+            print(f"已移除技能目录：{dest_dir}")
+    else:
+        print(f"[无技能目录] {dest_dir}（跳过）")
+    target = core.default_agents_target(root, args.scope)
+    res = core.detach_agents(target, dry_run=args.dry_run)
+    msg = {"absent": f"[无文件] {res['path']}",
+           "no-block": f"[无入口块] {res['path']}",
+           "removed": f"已移除入口块：{res['path']}",
+           "removed-and-deleted-file": f"已移除入口块并删除空文件：{res['path']}"}
+    print(msg[res["action"]] + ("（dry-run，未落盘）" if args.dry_run else ""))
+    print("工作区内的 gov-hub.yaml / registry.yaml / .govhub 不受影响；要清空请手工删除。")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(prog="govhub", description="gov-hub 治理骨架 CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -444,6 +520,20 @@ def main() -> int:
     p.add_argument("--file", default="")
     p.add_argument("--dry-run", action="store_true")
     p.set_defaults(fn=cmd_detach)
+    p = sub.add_parser("install", help="一键安装：SKILL.md 到发现根 + attach 入口块 + 自检")
+    p.add_argument("--root", default=".")
+    p.add_argument("--scope", default="user", choices=["project", "user"],
+                   help="技能与入口块的作用域（默认 user：全局生效）")
+    p.add_argument("--skill-dir", default="", help="显式指定技能发现根（优先于 --scope 推导）")
+    p.add_argument("--python", default="", help="写进块里的 Python 解释器路径")
+    p.add_argument("--dry-run", action="store_true")
+    p.set_defaults(fn=cmd_install)
+    p = sub.add_parser("uninstall", help="撤销 install：移除技能目录 + detach 入口块")
+    p.add_argument("--root", default=".")
+    p.add_argument("--scope", default="user", choices=["project", "user"])
+    p.add_argument("--skill-dir", default="", help="显式指定技能发现根")
+    p.add_argument("--dry-run", action="store_true")
+    p.set_defaults(fn=cmd_uninstall)
     args = ap.parse_args()
     return args.fn(args)
 

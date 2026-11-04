@@ -2,7 +2,7 @@
 
 > Agent 工作台的**治理骨架**：知识供给 → 执行 → 产出 → 回灌，四段链路可感知、可审计、可自启。
 >
-> **状态：0.1.0 MVP（loose 档可用）**
+> **状态：0.2.0（loose 档 + ensure 入口 + 一键安装）**
 
 **为什么用它**：真实项目实测，AI 找文件的导航成本**降低 96.7%~99.3%**
 （10 个高频查询，蛮力 62.4 万 chars vs 地图 4.2 千 chars，含读目标文件的保守口径）
@@ -17,6 +17,23 @@ tokens 相差最高 **≈6.8 倍**。同题三代对照（无地图 → 启用�
 ![导航成本对照](docs/assets/perf_chart.png)
 
 ## 快速上手（MVP）
+
+```bash
+# 1. 获取（任选其一）
+git clone https://github.com/songzhou/gov-hub.git   # 或下载 zip 解压到任意目录
+
+# 2. 一键安装：SKILL.md 进技能发现根 + 入口块进 AGENTS.md + 自检
+python govhub.py install                   # 用户级（推荐），所有会话生效
+python govhub.py install --scope project   # 或仅本项目
+
+# 3. 卸载（完全可逆，工作区数据文件不受影响）
+python govhub.py uninstall
+```
+
+装完即全自动：会话里问"XX 在哪个文件 / 结论在哪"，agent 自动
+`ensure → lookup → 直达权威文件`，答完顺手把新读到的权威文件 `add` 回地图。
+
+日常命令（工作区内）：
 
 ```bash
 python govhub.py init   --root <工作区>   # 范围确认关 + 登记表骨架生成
