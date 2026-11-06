@@ -1,7 +1,7 @@
 ---
 name: gov-hub
 displayName: 项目地图 gov-hub——让 AI 直达权威文件，实测导航成本降 96.7%~99.3%
-description: 当需要查找项目内容时加载——包括"某功能/结论/规范/报告在哪个文件"、"项目什么时候做过什么测试/检查/改动"等询问项目历史与现状的问题。让 AI 按项目地图直达权威文件而不是蛮力翻文件夹，实测导航成本降低 96.7%~99.3%，端到端问答提速最高 5.8 倍。触发场景：找文件、找结论、问项目过去做过什么、收尾检查新增产出是否归档、用户提到项目地图/资产索引。注意：若项目已有自己的资产查询协议（如 AGENTS.md 中定义的 lookup 工具），以项目协议为准，本技能自动让位。不适用：写业务功能代码、查对话历史、检索代码符号（用宿主 grep）、工作区无任何权威文档的项目（地图没有可索引的对象）。关键词：在哪、找、哪个文件、什么时候、做过什么、历史、报告、结论、项目地图、资产、归档。
+description: 当需要查找项目内容时加载——包括"某功能/结论/规范/报告在哪个文件"、"项目什么时候做过什么测试/检查/改动"等询问项目历史与现状的问题。让 AI 按项目地图直达权威文件而不是蛮力翻文件夹，实测导航成本降低 96.7%~99.3%，同题问答提速 3.5 倍（141s/40 次调用 → 40s/5 次调用）。触发场景：找文件、找结论、问项目过去做过什么、收尾检查新增产出是否归档、用户提到项目地图/资产索引。注意：若项目已有自己的资产查询协议（如 AGENTS.md 中定义的 lookup 工具），以项目协议为准，本技能自动让位。不适用：写业务功能代码、查对话历史、检索代码符号（用宿主 grep）、工作区无任何权威文档的项目（地图没有可索引的对象）。关键词：在哪、找、哪个文件、什么时候、做过什么、历史、报告、结论、项目地图、资产、归档。
 version: 0.3.0
 license: MIT
 whenToUse: 需要查找项目内容、项目历史、权威文件位置时加载
@@ -11,7 +11,7 @@ x-astron-runtime: python>=3.9
 x-astron-min-version: "0.2.0"
 x-astron-compliance:
   - 纯本地运行：不发起任何网络请求，不上传任何数据
-  - 纯 Python 标准库（唯一可选第三方依赖 PyYAML，缺失时自动降级为 JSON 索引）
+  - 依赖 PyYAML（pip install pyyaml），其余为 Python 标准库；不联网、不上传
   - 只读写用户工作区内的明确路径，卸载命令可完整撤销
   - 不收集统计、不记录对话内容
 platforms: [deepseek-harness, claude-code, agent-generic]
@@ -35,7 +35,7 @@ platforms: [deepseek-harness, claude-code, agent-generic]
 | 流程反反复复失灵/想理解三拍设计依据 | [references/anti-patterns.md](references/anti-patterns.md) |
 | 边缘场景：多区、decline 标记、无提问工具、并发写、离线部署 | [references/faq-deep.md](references/faq-deep.md) |
 | 不确定 ensure/lookup/add 的真实输出长什么样 | [references/examples.md](references/examples.md) |
-| 要看性能数据出处（96.7%~99.3% / 5.8 倍） | 仓库 `bench/RESULTS.md` |
+| 要看性能数据出处（96.7%~99.3% / 同题 3.5 倍） | 仓库 `bench/RESULTS.md` |
 
 **开场白示例（可直接照做）**：
 1. 用户问"登录的测试结论在哪个文件" → 先 `ensure`，`[OK]` 后 `lookup "登录 测试结论"`，按返回路径读文件作答。
@@ -94,8 +94,8 @@ PYTHON CLI_PATH ensure --root <工作区>
 - **我的用户级**（一次注册、所有项目生效；未启用项目自动忽略）→ `--scope user`；
 - **不用** → 什么都不做。
 
-`attach` 只写标记块（`<!-- gov-hub:begin -->` … `<!-- gov-hub:end -->`），块外一字节不动、
-重复执行不重复追加，`PYTHON CLI_PATH detach --root <工作区> --scope <同上>` 可逐字节还原。
+`attach` 只写标记块（`<!-- gov-hub:begin -->` … `<!-- gov-hub:end -->`），块外内容不改动、
+重复执行不重复追加，`PYTHON CLI_PATH detach --root <工作区> --scope <同上>` 可完整移除入口块（块外内容不动）。
 **不得在用户没同意时写 AGENTS.md。**
 
 ## 供给（已启用区，动手前先查）

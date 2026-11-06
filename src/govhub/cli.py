@@ -230,7 +230,7 @@ def cmd_suggest(args: argparse.Namespace) -> int:
     print(f"根据路线迹提炼出 {len(props)} 条登记提案（仅提案，确认后请手工改 registry.yaml）：\n")
     for p in props:
         print(f"[{p['kind']}] {p['id']} · {p['path']}")
-        print(f"  依据：被查 {p["hits"]} 次，查法：{p['suggest_keywords']}")
+        print(f"  依据：被查 {p['hits']} 次，查法：{p['suggest_keywords']}")
         print(f"  建议 YAML：\n{p['yaml']}\n")
     if args.json:
         print(json.dumps(props, ensure_ascii=False, indent=2))
@@ -325,7 +325,7 @@ def cmd_attach(args: argparse.Namespace) -> int:
     """
     root = Path(args.root or ".").resolve()
     scope = args.scope
-    target = Path(args.file) if args.file else core.default_agents_target(root, scope)
+    target = Path(args.file).expanduser() if args.file else core.default_agents_target(root, scope)
     block = core.agents_block(args.python or sys.executable, _cli_path())
     res = core.attach_agents(target, block, dry_run=args.dry_run)
     if res["action"] == "updated" and not res["changed"]:
@@ -352,7 +352,7 @@ def cmd_attach(args: argparse.Namespace) -> int:
 def cmd_detach(args: argparse.Namespace) -> int:
     """移除入口块。不加闸：撤销必须永远可用——用户拒绝（MUTED）或未声明时也要能撤销。"""
     root = Path(args.root or ".").resolve()
-    target = Path(args.file) if args.file else core.default_agents_target(root, args.scope)
+    target = Path(args.file).expanduser() if args.file else core.default_agents_target(root, args.scope)
     res = core.detach_agents(target, dry_run=args.dry_run)
     msg = {"absent": f"[无文件] {res['path']}",
            "no-block": f"[无入口块] {res['path']}（未找到 gov-hub 标记，未改动）",
@@ -401,7 +401,7 @@ def cmd_install(args: argparse.Namespace) -> int:
     root = Path(args.root or ".").resolve()
     cli = _cli_path()
     python = args.python or sys.executable
-    skill_root = Path(args.skill_dir) if args.skill_dir else _default_skill_root(args.scope, root)
+    skill_root = Path(args.skill_dir).expanduser() if args.skill_dir else _default_skill_root(args.scope, root)
     dest_dir = skill_root / "gov-hub"
     dest = dest_dir / "SKILL.md"
     src = Path(__file__).resolve().parents[2] / "SKILL.md"
@@ -438,7 +438,7 @@ def cmd_install(args: argparse.Namespace) -> int:
 def cmd_uninstall(args: argparse.Namespace) -> int:
     """撤销 install：移除技能目录 + detach 入口块。MUTED/未声明状态下也必须可用。"""
     root = Path(args.root or ".").resolve()
-    skill_root = Path(args.skill_dir) if args.skill_dir else _default_skill_root(args.scope, root)
+    skill_root = Path(args.skill_dir).expanduser() if args.skill_dir else _default_skill_root(args.scope, root)
     dest_dir = skill_root / "gov-hub"
     if dest_dir.exists():
         if args.dry_run:
